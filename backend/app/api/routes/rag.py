@@ -3,9 +3,32 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import get_current_candidate, get_current_recruiter
+from app.services.candidate import (
+    CandidateStructuredRequest,
+    generate_candidate_answer_guidance,
+    generate_candidate_interview_questions,
+    generate_candidate_skill_gap_analysis,
+    generate_candidate_star_answer,
+)
+from app.services.recruiter import (
+    RecruiterStructuredRequest,
+    generate_recruiter_fit_summary,
+    generate_recruiter_interview_pack,
+)
 from app.core.config import get_settings
 from app.models.user import User, UserRole
-from app.schemas.generation import GenerationQueryRequest, GenerationResponse
+from app.schemas.generation import (
+    CandidateAnswerGuidanceResponse,
+    CandidateGenerationRequest,
+    CandidateInterviewQuestionsResponse,
+    CandidateSkillGapAnalysisResponse,
+    CandidateStarAnswerResponse,
+    GenerationQueryRequest,
+    GenerationResponse,
+    RecruiterFitSummaryResponse,
+    RecruiterGenerationRequest,
+    RecruiterInterviewPackResponse,
+)
 from app.schemas.retrieval import RetrievalQueryRequest, RetrievalResponse
 from app.services.rag import (
     GroundedGenerationError,
@@ -133,6 +156,150 @@ def generate_candidate_output(
             payload=payload,
             current_user=current_user,
             role=UserRole.CANDIDATE,
+        )
+    except GroundedGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+
+def build_candidate_structured_request(
+    *,
+    payload: CandidateGenerationRequest,
+    current_user: User,
+) -> CandidateStructuredRequest:
+    return CandidateStructuredRequest(
+        query=payload.query,
+        user=current_user,
+        document_types=payload.document_types,
+        top_k=payload.top_k,
+        score_threshold=payload.score_threshold,
+        model_override=payload.model_override,
+        use_upgrade_model=payload.use_upgrade_model,
+        temperature=payload.temperature,
+        max_output_tokens=payload.max_output_tokens,
+    )
+
+
+def build_recruiter_structured_request(
+    *,
+    payload: RecruiterGenerationRequest,
+    current_user: User,
+) -> RecruiterStructuredRequest:
+    return RecruiterStructuredRequest(
+        query=payload.query,
+        user=current_user,
+        document_types=payload.document_types,
+        top_k=payload.top_k,
+        score_threshold=payload.score_threshold,
+        model_override=payload.model_override,
+        use_upgrade_model=payload.use_upgrade_model,
+        temperature=payload.temperature,
+        max_output_tokens=payload.max_output_tokens,
+    )
+
+
+@router.post("/candidate/interview-questions", response_model=CandidateInterviewQuestionsResponse)
+def generate_candidate_interview_questions_output(
+    payload: CandidateGenerationRequest,
+    current_user: User = Depends(get_current_candidate),
+) -> CandidateInterviewQuestionsResponse:
+    try:
+        return CandidateInterviewQuestionsResponse.model_validate(
+            generate_candidate_interview_questions(
+                build_candidate_structured_request(payload=payload, current_user=current_user)
+            )
+        )
+    except GroundedGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/candidate/answer-guidance", response_model=CandidateAnswerGuidanceResponse)
+def generate_candidate_answer_guidance_output(
+    payload: CandidateGenerationRequest,
+    current_user: User = Depends(get_current_candidate),
+) -> CandidateAnswerGuidanceResponse:
+    try:
+        return CandidateAnswerGuidanceResponse.model_validate(
+            generate_candidate_answer_guidance(
+                build_candidate_structured_request(payload=payload, current_user=current_user)
+            )
+        )
+    except GroundedGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/candidate/star-answer", response_model=CandidateStarAnswerResponse)
+def generate_candidate_star_answer_output(
+    payload: CandidateGenerationRequest,
+    current_user: User = Depends(get_current_candidate),
+) -> CandidateStarAnswerResponse:
+    try:
+        return CandidateStarAnswerResponse.model_validate(
+            generate_candidate_star_answer(
+                build_candidate_structured_request(payload=payload, current_user=current_user)
+            )
+        )
+    except GroundedGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/candidate/skill-gap-analysis", response_model=CandidateSkillGapAnalysisResponse)
+def generate_candidate_skill_gap_analysis_output(
+    payload: CandidateGenerationRequest,
+    current_user: User = Depends(get_current_candidate),
+) -> CandidateSkillGapAnalysisResponse:
+    try:
+        return CandidateSkillGapAnalysisResponse.model_validate(
+            generate_candidate_skill_gap_analysis(
+                build_candidate_structured_request(payload=payload, current_user=current_user)
+            )
+        )
+    except GroundedGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/recruiter/fit-summary", response_model=RecruiterFitSummaryResponse)
+def generate_recruiter_fit_summary_output(
+    payload: RecruiterGenerationRequest,
+    current_user: User = Depends(get_current_recruiter),
+) -> RecruiterFitSummaryResponse:
+    try:
+        return RecruiterFitSummaryResponse.model_validate(
+            generate_recruiter_fit_summary(
+                build_recruiter_structured_request(payload=payload, current_user=current_user)
+            )
+        )
+    except GroundedGenerationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/recruiter/interview-pack", response_model=RecruiterInterviewPackResponse)
+def generate_recruiter_interview_pack_output(
+    payload: RecruiterGenerationRequest,
+    current_user: User = Depends(get_current_recruiter),
+) -> RecruiterInterviewPackResponse:
+    try:
+        return RecruiterInterviewPackResponse.model_validate(
+            generate_recruiter_interview_pack(
+                build_recruiter_structured_request(payload=payload, current_user=current_user)
+            )
         )
     except GroundedGenerationError as exc:
         raise HTTPException(

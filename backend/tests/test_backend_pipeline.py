@@ -366,7 +366,27 @@ def test_grounded_generation_endpoints_return_answer_and_evidence(tmp_path: Path
         )
         assert candidate_notes_upload.status_code == 201
 
-        for document_id in [candidate_cv_upload.json()["id"], candidate_notes_upload.json()["id"]]:
+        candidate_job_upload = client.post(
+            "/documents/upload",
+            headers=candidate_headers,
+            files={
+                "file": (
+                    "job.txt",
+                    BytesIO(
+                        b"# Requirements\nNeed FastAPI, retrieval engineering, stakeholder communication, and structured interviewing.\n"
+                    ),
+                    "text/plain",
+                )
+            },
+            data={"document_type": "job_description"},
+        )
+        assert candidate_job_upload.status_code == 201
+
+        for document_id in [
+            candidate_cv_upload.json()["id"],
+            candidate_notes_upload.json()["id"],
+            candidate_job_upload.json()["id"],
+        ]:
             assert client.post(f"/documents/{document_id}/parse", headers=candidate_headers).status_code == 200
             assert client.post(f"/documents/{document_id}/chunk", headers=candidate_headers).status_code == 200
             assert client.post(f"/documents/{document_id}/reindex", headers=candidate_headers).status_code == 200
@@ -390,6 +410,29 @@ def test_grounded_generation_endpoints_return_answer_and_evidence(tmp_path: Path
         assert client.post(f"/documents/{recruiter_document_id}/parse", headers=recruiter_headers).status_code == 200
         assert client.post(f"/documents/{recruiter_document_id}/chunk", headers=recruiter_headers).status_code == 200
         assert client.post(f"/documents/{recruiter_document_id}/reindex", headers=recruiter_headers).status_code == 200
+
+        recruiter_candidate_upload = client.post(
+            "/documents/upload",
+            headers=recruiter_headers,
+            files={
+                "file": (
+                    "candidate.pdf",
+                    BytesIO(
+                        create_pdf_bytes(
+                            title="Candidate CV",
+                            body="Built FastAPI services, retrieval pipelines, and document processing flows for hiring tooling.",
+                        )
+                    ),
+                    "application/pdf",
+                )
+            },
+            data={"document_type": "recruiter_candidate_cv"},
+        )
+        assert recruiter_candidate_upload.status_code == 201
+        recruiter_candidate_document_id = recruiter_candidate_upload.json()["id"]
+        assert client.post(f"/documents/{recruiter_candidate_document_id}/parse", headers=recruiter_headers).status_code == 200
+        assert client.post(f"/documents/{recruiter_candidate_document_id}/chunk", headers=recruiter_headers).status_code == 200
+        assert client.post(f"/documents/{recruiter_candidate_document_id}/reindex", headers=recruiter_headers).status_code == 200
 
         candidate_generation = client.post(
             "/rag/candidate/generate",
@@ -431,6 +474,125 @@ def test_grounded_generation_endpoints_return_answer_and_evidence(tmp_path: Path
         assert recruiter_generation_json["evidence_count"] >= 1
         assert "Fit summary:" in recruiter_generation_json["answer"]
         assert all(item["owner_role"] == "recruiter" for item in recruiter_generation_json["evidence"])
+
+        recruiter_fit_summary = client.post(
+            "/rag/recruiter/fit-summary",
+            headers=recruiter_headers,
+            json={
+                "query": "Summarize the fit for a FastAPI retrieval role.",
+                "document_types": ["job_description", "recruiter_candidate_cv"],
+                "top_k": 5,
+                "score_threshold": 0.0,
+            },
+        )
+        assert recruiter_fit_summary.status_code == 200
+        recruiter_fit_summary_json = recruiter_fit_summary.json()
+        assert recruiter_fit_summary_json["evidence_count"] >= 1
+        assert "Fit summary:" in recruiter_fit_summary_json["summary"]
+        assert recruiter_fit_summary_json["strengths"]
+        assert recruiter_fit_summary_json["concerns"]
+        assert recruiter_fit_summary_json["missing_evidence_areas"]
+        assert recruiter_fit_summary_json["recommendation"]
+
+        recruiter_interview_pack = client.post(
+            "/rag/recruiter/interview-pack",
+            headers=recruiter_headers,
+            json={
+                "query": "Build an interview pack for a FastAPI retrieval role.",
+                "document_types": ["job_description", "recruiter_candidate_cv"],
+                "top_k": 5,
+                "score_threshold": 0.0,
+                "use_upgrade_model": True,
+            },
+        )
+        assert recruiter_interview_pack.status_code == 200
+        recruiter_interview_pack_json = recruiter_interview_pack.json()
+        assert recruiter_interview_pack_json["evidence_count"] >= 1
+        assert "Interview pack:" in recruiter_interview_pack_json["overview"]
+        assert len(recruiter_interview_pack_json["probes"]) >= 3
+        assert recruiter_interview_pack_json["follow_up_questions"]
+        assert all(item["rationale"] for item in recruiter_interview_pack_json["probes"])
+        assert all(item["evidence_chunk_ids"] for item in recruiter_interview_pack_json["probes"])
+
+        candidate_questions = client.post(
+            "/rag/candidate/interview-questions",
+            headers=candidate_headers,
+            json={
+                "query": "How should I prepare for a FastAPI retrieval interview?",
+                "document_types": ["cv", "project_notes", "job_description"],
+                "top_k": 5,
+                "score_threshold": 0.0,
+            },
+        )
+        assert candidate_questions.status_code == 200
+        candidate_questions_json = candidate_questions.json()
+        assert candidate_questions_json["evidence_count"] >= 1
+        assert len(candidate_questions_json["questions"]) >= 3
+        assert "Likely interview questions:" in candidate_questions_json["overview"]
+        assert any(item["category"] == "requirements" for item in candidate_questions_json["questions"])
+        assert all(item["evidence_chunk_ids"] for item in candidate_questions_json["questions"])
+
+        candidate_guidance = client.post(
+            "/rag/candidate/answer-guidance",
+            headers=candidate_headers,
+            json={
+                "query": "How do I explain my retrieval engineering experience clearly?",
+                "document_types": ["cv", "project_notes", "job_description"],
+                "top_k": 5,
+                "score_threshold": 0.0,
+                "use_upgrade_model": True,
+            },
+        )
+        assert candidate_guidance.status_code == 200
+        candidate_guidance_json = candidate_guidance.json()
+        assert candidate_guidance_json["evidence_count"] >= 1
+        assert candidate_guidance_json["opening_answer"]
+        assert candidate_guidance_json["talking_points"]
+        assert candidate_guidance_json["stronger_version_tip"]
+        assert len(candidate_guidance_json["follow_up_questions"]) >= 2
+        assert "Answer outline:" in candidate_guidance_json["answer_draft"]
+
+        candidate_star = client.post(
+            "/rag/candidate/star-answer",
+            headers=candidate_headers,
+            json={
+                "query": "Tell me about a time you built a retrieval workflow.",
+                "document_types": ["cv", "project_notes", "job_description"],
+                "top_k": 5,
+                "score_threshold": 0.0,
+            },
+        )
+        assert candidate_star.status_code == 200
+        candidate_star_json = candidate_star.json()
+        assert candidate_star_json["evidence_count"] >= 1
+        assert candidate_star_json["situation"]["content"]
+        assert candidate_star_json["task"]["content"]
+        assert candidate_star_json["action"]["content"]
+        assert candidate_star_json["result"]["content"]
+        assert "Situation:" in candidate_star_json["editable_draft"]
+        assert "Task:" in candidate_star_json["editable_draft"]
+        assert len(candidate_star_json["missing_signals"]) >= 1
+
+        candidate_skill_gap = client.post(
+            "/rag/candidate/skill-gap-analysis",
+            headers=candidate_headers,
+            json={
+                "query": "Where are my gaps for this FastAPI retrieval role?",
+                "document_types": ["cv", "project_notes", "job_description"],
+                "top_k": 5,
+                "score_threshold": 0.0,
+                "use_upgrade_model": True,
+            },
+        )
+        assert candidate_skill_gap.status_code == 200
+        candidate_skill_gap_json = candidate_skill_gap.json()
+        assert candidate_skill_gap_json["evidence_count"] >= 1
+        assert "Skill-gap analysis:" in candidate_skill_gap_json["analysis_summary"]
+        assert candidate_skill_gap_json["strengths"]
+        assert candidate_skill_gap_json["missing_signals"]
+        assert candidate_skill_gap_json["improvement_actions"]
+        assert any(item["severity"] == "high" for item in candidate_skill_gap_json["missing_signals"])
+        assert all(item["recommendation"] for item in candidate_skill_gap_json["missing_signals"])
 
         invalid_prompt_type = client.post(
             "/rag/candidate/generate",
