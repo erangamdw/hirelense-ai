@@ -1,3 +1,17 @@
+from app.services.documents.chunking import (
+    ChunkDraft,
+    DocumentChunkingError,
+    build_chunk_drafts,
+    chunk_stored_document,
+    create_langchain_documents,
+)
+from app.services.documents.parsing import (
+    DocumentNotFoundError,
+    DocumentParsingError,
+    ParsingResult,
+    get_owned_document,
+    parse_stored_document,
+)
 from app.services.documents.upload import (
     ALLOWED_EXTENSIONS_BY_TYPE,
     DocumentValidationError,
@@ -8,8 +22,18 @@ from app.services.documents.upload import (
 
 __all__ = [
     "ALLOWED_EXTENSIONS_BY_TYPE",
+    "ChunkDraft",
+    "DocumentNotFoundError",
+    "DocumentChunkingError",
+    "DocumentParsingError",
     "DocumentValidationError",
+    "ParsingResult",
+    "build_chunk_drafts",
     "count_documents_for_user",
+    "chunk_stored_document",
     "create_document_record",
+    "create_langchain_documents",
+    "get_owned_document",
+    "parse_stored_document",
     "save_upload_file",
 ]

@@ -24,6 +24,9 @@ class Settings:
     database_echo: bool = os.getenv("DATABASE_ECHO", "false").lower() == "true"
     upload_dir: str = os.getenv("UPLOAD_DIR", str(BASE_DIR / "uploads"))
     max_upload_size_bytes: int = int(os.getenv("MAX_UPLOAD_SIZE_BYTES", str(5 * 1024 * 1024)))
+    langchain_chunk_size: int = int(os.getenv("LANGCHAIN_CHUNK_SIZE", "1000"))
+    langchain_chunk_overlap: int = int(os.getenv("LANGCHAIN_CHUNK_OVERLAP", "150"))
+    min_chunk_characters: int = int(os.getenv("MIN_CHUNK_CHARACTERS", "120"))
     jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "change-this-in-production")
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))

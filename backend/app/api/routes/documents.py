@@ -6,8 +6,17 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user, get_db_session
 from app.models.document import DocumentType
 from app.models.user import User
-from app.schemas.document import DocumentResponse
-from app.services.documents import DocumentValidationError, create_document_record, save_upload_file
+from app.schemas.document import DocumentChunkingResponse, ChunkResponse, DocumentResponse
+from app.services.documents import (
+    DocumentNotFoundError,
+    DocumentChunkingError,
+    DocumentParsingError,
+    DocumentValidationError,
+    chunk_stored_document,
+    create_document_record,
+    parse_stored_document,
+    save_upload_file,
+)
 
 router = APIRouter(prefix="/documents")
 
@@ -43,3 +52,51 @@ def upload_document(
         size_bytes=size_bytes,
     )
     return DocumentResponse.model_validate(document)
+
+
+@router.post("/{document_id}/parse", response_model=DocumentResponse)
+def parse_document(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> DocumentResponse:
+    try:
+        document = parse_stored_document(db, user=current_user, document_id=document_id)
+    except DocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except DocumentParsingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return DocumentResponse.model_validate(document)
+
+
+@router.post("/{document_id}/chunk", response_model=DocumentChunkingResponse)
+def chunk_document(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> DocumentChunkingResponse:
+    try:
+        chunks = chunk_stored_document(db, user=current_user, document_id=document_id)
+    except DocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except DocumentChunkingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+    return DocumentChunkingResponse(
+        document_id=document_id,
+        chunk_count=len(chunks),
+        chunks=[ChunkResponse.model_validate(chunk) for chunk in chunks],
+    )
