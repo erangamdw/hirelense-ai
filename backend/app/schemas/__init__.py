@@ -41,6 +41,13 @@ from app.schemas.recruiter import (
     RecruiterJobListItemResponse,
     RecruiterJobListResponse,
 )
+from app.schemas.recruiter_dashboard import (
+    RecruiterCandidateReviewResponse,
+    RecruiterDashboardRecentReportResponse,
+    RecruiterDashboardSummaryResponse,
+    RecruiterJobReviewCandidateResponse,
+    RecruiterJobReviewResponse,
+)
 from app.schemas.report import (
     SavedReportCreateRequest,
     SavedReportHistoryResponse,
@@ -76,7 +83,10 @@ __all__ = [
     "LoginRequest",
     "RecruiterConcernResponse",
     "RecruiterCandidateIntakeCreate",
+    "RecruiterCandidateReviewResponse",
     "RecruiterCandidateResponse",
+    "RecruiterDashboardRecentReportResponse",
+    "RecruiterDashboardSummaryResponse",
     "RecruiterFitSummaryResponse",
     "RecruiterGenerationRequest",
     "RecruiterInterviewPackResponse",
@@ -85,6 +95,8 @@ __all__ = [
     "RecruiterJobDetailResponse",
     "RecruiterJobListItemResponse",
     "RecruiterJobListResponse",
+    "RecruiterJobReviewCandidateResponse",
+    "RecruiterJobReviewResponse",
     "RecruiterStrengthSignalResponse",
     "RetrievalQueryRequest",
     "RetrievalResponse",

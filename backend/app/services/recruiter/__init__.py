@@ -3,6 +3,11 @@ from app.services.recruiter.generation import (
     generate_recruiter_fit_summary,
     generate_recruiter_interview_pack,
 )
+from app.services.recruiter.dashboard import (
+    build_recruiter_candidate_review,
+    build_recruiter_dashboard_summary,
+    build_recruiter_job_review,
+)
 from app.services.recruiter.management import (
     CANDIDATE_UPLOAD_DOCUMENT_TYPES,
     JOB_UPLOAD_DOCUMENT_TYPES,
@@ -27,8 +32,11 @@ __all__ = [
     "RecruiterCandidateNotFoundError",
     "RecruiterJobNotFoundError",
     "RecruiterManagementError",
+    "build_recruiter_candidate_review",
+    "build_recruiter_dashboard_summary",
     "build_recruiter_candidate_response",
     "build_recruiter_job_list_item",
+    "build_recruiter_job_review",
     "create_recruiter_candidate",
     "create_recruiter_job",
     "generate_recruiter_fit_summary",

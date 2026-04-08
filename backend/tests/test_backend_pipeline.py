@@ -1137,3 +1137,131 @@ def test_recruiter_scoped_retrieval_and_report_history_filters(tmp_path: Path, m
         )
         assert recruiter_history_wrong_scope.status_code == 200
         assert recruiter_history_wrong_scope.json()["total"] == 0
+
+
+def test_recruiter_dashboard_and_review_endpoints_return_summary_shapes(tmp_path: Path, monkeypatch) -> None:
+    with build_test_client(tmp_path, monkeypatch) as (client, _session_factory):
+        recruiter_token = register_and_login(client, email="recruiter-dashboard@example.com", role="recruiter")
+        recruiter_headers = {"Authorization": f"Bearer {recruiter_token}"}
+
+        job_response = client.post(
+            "/recruiter/jobs",
+            headers=recruiter_headers,
+            json={
+                "title": "Platform Retrieval Engineer",
+                "description": "Own retrieval APIs and interview signal quality.",
+                "location": "Remote",
+                "skills_required": ["FastAPI", "SQLAlchemy", "Chroma"],
+            },
+        )
+        assert job_response.status_code == 201
+        job_id = job_response.json()["id"]
+
+        candidate_response = client.post(
+            f"/recruiter/jobs/{job_id}/candidates",
+            headers=recruiter_headers,
+            json={
+                "full_name": "Taylor Reviewer",
+                "current_title": "Senior Backend Engineer",
+                "notes": "Strong retrieval signal. Verify production scale.",
+            },
+        )
+        assert candidate_response.status_code == 201
+        candidate_id = candidate_response.json()["id"]
+
+        job_document_upload = client.post(
+            f"/recruiter/jobs/{job_id}/documents/upload",
+            headers=recruiter_headers,
+            files={
+                "file": (
+                    "job.txt",
+                    BytesIO(b"# Requirements\nNeed retrieval systems, evidence-backed screening, and API ownership.\n"),
+                    "text/plain",
+                )
+            },
+            data={"document_type": "job_description"},
+        )
+        assert job_document_upload.status_code == 201
+
+        candidate_document_upload = client.post(
+            f"/recruiter/jobs/{job_id}/candidates/{candidate_id}/documents/upload",
+            headers=recruiter_headers,
+            files={
+                "file": (
+                    "candidate.pdf",
+                    BytesIO(
+                        create_pdf_bytes(
+                            title="Candidate",
+                            body="Built retrieval systems and grounded interview tooling with FastAPI.",
+                        )
+                    ),
+                    "application/pdf",
+                )
+            },
+            data={"document_type": "recruiter_candidate_cv"},
+        )
+        assert candidate_document_upload.status_code == 201
+
+        for document_id in [job_document_upload.json()["id"], candidate_document_upload.json()["id"]]:
+            assert client.post(f"/documents/{document_id}/parse", headers=recruiter_headers).status_code == 200
+            assert client.post(f"/documents/{document_id}/chunk", headers=recruiter_headers).status_code == 200
+            assert client.post(f"/documents/{document_id}/reindex", headers=recruiter_headers).status_code == 200
+
+        fit_summary_response = client.post(
+            "/rag/recruiter/fit-summary",
+            headers=recruiter_headers,
+            json={
+                "query": "Summarize fit for the retrieval platform role.",
+                "document_types": ["job_description", "recruiter_candidate_cv"],
+                "top_k": 5,
+                "score_threshold": 0.0,
+                "recruiter_job_id": job_id,
+                "recruiter_candidate_id": candidate_id,
+            },
+        )
+        assert fit_summary_response.status_code == 200
+
+        save_report_response = client.post(
+            "/reports",
+            headers=recruiter_headers,
+            json={
+                "report_type": "recruiter_fit_summary",
+                "query": "Summarize fit for the retrieval platform role.",
+                "recruiter_job_id": job_id,
+                "recruiter_candidate_id": candidate_id,
+                "payload": fit_summary_response.json(),
+            },
+        )
+        assert save_report_response.status_code == 201
+
+        dashboard_response = client.get("/recruiter/dashboard", headers=recruiter_headers)
+        assert dashboard_response.status_code == 200
+        dashboard_json = dashboard_response.json()
+        assert dashboard_json["jobs_count"] == 1
+        assert dashboard_json["candidate_count"] == 1
+        assert dashboard_json["candidate_document_count"] == 1
+        assert dashboard_json["report_count"] == 1
+        assert dashboard_json["recent_reports"][0]["recruiter_job_id"] == job_id
+        assert candidate_response.json()["full_name"] in dashboard_json["recent_candidate_names"]
+
+        job_review_response = client.get(f"/recruiter/jobs/{job_id}/review", headers=recruiter_headers)
+        assert job_review_response.status_code == 200
+        job_review_json = job_review_response.json()
+        assert job_review_json["job_document_count"] == 1
+        assert job_review_json["candidate_count"] == 1
+        assert job_review_json["report_count"] == 1
+        assert job_review_json["latest_report_type"] == "recruiter_fit_summary"
+        assert job_review_json["candidates"][0]["report_count"] == 1
+        assert job_review_json["candidates"][0]["document_count"] == 1
+
+        candidate_review_response = client.get(
+            f"/recruiter/jobs/{job_id}/candidates/{candidate_id}/review",
+            headers=recruiter_headers,
+        )
+        assert candidate_review_response.status_code == 200
+        candidate_review_json = candidate_review_response.json()
+        assert candidate_review_json["document_count"] == 1
+        assert candidate_review_json["report_count"] == 1
+        assert candidate_review_json["latest_report_type"] == "recruiter_fit_summary"
+        assert candidate_review_json["document_types"] == ["recruiter_candidate_cv"]
+        assert candidate_review_json["report_history"][0]["recruiter_candidate_id"] == candidate_id

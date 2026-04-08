@@ -20,6 +20,14 @@ class Settings:
     debug: bool = os.getenv("DEBUG", "false").lower() == "true"
     enable_docs: bool = os.getenv("ENABLE_DOCS", "true").lower() == "true"
     api_prefix: str = os.getenv("API_PREFIX", "")
+    allowed_origins: tuple[str, ...] = tuple(
+        origin.strip()
+        for origin in os.getenv(
+            "ALLOWED_ORIGINS",
+            "http://127.0.0.1:3000,http://localhost:3000",
+        ).split(",")
+        if origin.strip()
+    )
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./hirelense_ai.db")
     database_echo: bool = os.getenv("DATABASE_ECHO", "false").lower() == "true"
     upload_dir: str = os.getenv("UPLOAD_DIR", str(BASE_DIR / "uploads"))

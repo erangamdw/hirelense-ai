@@ -14,13 +14,21 @@ from app.schemas.recruiter import (
     RecruiterJobDetailResponse,
     RecruiterJobListResponse,
 )
+from app.schemas.recruiter_dashboard import (
+    RecruiterCandidateReviewResponse,
+    RecruiterDashboardSummaryResponse,
+    RecruiterJobReviewResponse,
+)
 from app.services.documents import DocumentValidationError, create_document_record, save_upload_file
 from app.services.recruiter import (
     RecruiterCandidateNotFoundError,
     RecruiterJobNotFoundError,
     RecruiterManagementError,
+    build_recruiter_candidate_review,
     build_recruiter_candidate_response,
+    build_recruiter_dashboard_summary,
     build_recruiter_job_list_item,
+    build_recruiter_job_review,
     create_recruiter_candidate,
     create_recruiter_job,
     get_recruiter_candidate,
@@ -31,6 +39,14 @@ from app.services.recruiter import (
 )
 
 router = APIRouter(prefix="/recruiter")
+
+
+@router.get("/dashboard", response_model=RecruiterDashboardSummaryResponse)
+def read_dashboard(
+    current_user: User = Depends(get_current_recruiter),
+    db: Session = Depends(get_db_session),
+) -> RecruiterDashboardSummaryResponse:
+    return build_recruiter_dashboard_summary(db, recruiter=current_user)
 
 
 @router.post("/jobs", response_model=RecruiterJobDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -77,6 +93,21 @@ def get_job_detail(
     )
 
 
+@router.get("/jobs/{job_id}/review", response_model=RecruiterJobReviewResponse)
+def get_job_review(
+    job_id: int,
+    current_user: User = Depends(get_current_recruiter),
+    db: Session = Depends(get_db_session),
+) -> RecruiterJobReviewResponse:
+    try:
+        return build_recruiter_job_review(db, recruiter=current_user, job_id=job_id)
+    except RecruiterJobNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
 @router.post(
     "/jobs/{job_id}/candidates",
     response_model=RecruiterCandidateResponse,
@@ -103,6 +134,30 @@ def create_candidate_intake(
         candidate_id=candidate.id,
     )
     return build_recruiter_candidate_response(hydrated_candidate)
+
+
+@router.get(
+    "/jobs/{job_id}/candidates/{candidate_id}/review",
+    response_model=RecruiterCandidateReviewResponse,
+)
+def get_candidate_review(
+    job_id: int,
+    candidate_id: int,
+    current_user: User = Depends(get_current_recruiter),
+    db: Session = Depends(get_db_session),
+) -> RecruiterCandidateReviewResponse:
+    try:
+        return build_recruiter_candidate_review(
+            db,
+            recruiter=current_user,
+            job_id=job_id,
+            candidate_id=candidate_id,
+        )
+    except (RecruiterJobNotFoundError, RecruiterCandidateNotFoundError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post(
