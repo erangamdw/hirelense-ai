@@ -9,7 +9,7 @@ export default function RecruiterLayout({
     <AppShell
       role="recruiter"
       title="Recruiter workspace"
-      subtitle="Shared shell for recruiter flows. This foundation route already consumes the live recruiter dashboard summary endpoint."
+      subtitle="Live recruiter workflow for dashboard summary, job management, candidate intake, scoped uploads, and review summaries."
     >
       {children}
     </AppShell>

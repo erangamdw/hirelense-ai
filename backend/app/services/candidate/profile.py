@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.candidate_profile import CandidateProfile
+from app.models.report import SavedReport
 from app.models.user import User
 from app.schemas.candidate_profile import (
     CandidateDashboardSummary,
@@ -80,6 +81,11 @@ def update_candidate_profile(
 
 def build_candidate_dashboard_summary(db: Session, *, user: User) -> CandidateDashboardSummary:
     profile = get_candidate_profile(db, user_id=user.id)
+    saved_report_count = int(
+        db.execute(
+            select(func.count(SavedReport.id)).where(SavedReport.owner_user_id == user.id)
+        ).scalar_one()
+    )
     return CandidateDashboardSummary(
         user_id=user.id,
         email=user.email,
@@ -87,6 +93,6 @@ def build_candidate_dashboard_summary(db: Session, *, user: User) -> CandidateDa
         has_profile=profile is not None,
         target_roles=profile.target_roles if profile is not None else [],
         uploaded_document_count=count_documents_for_user(db, user_id=user.id),
-        saved_report_count=0,
+        saved_report_count=saved_report_count,
         latest_interview_sessions=[],
     )

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.document import DocumentIndexingStatus, DocumentParsingStatus, DocumentType
 
@@ -57,3 +57,9 @@ class DocumentIndexingResponse(BaseModel):
     collection_name: str
     vector_ids: list[str]
     indexing_status: DocumentIndexingStatus
+
+
+class TextDocumentCreateRequest(BaseModel):
+    document_type: DocumentType
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    content: str = Field(min_length=1, max_length=200000)

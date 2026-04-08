@@ -37,14 +37,14 @@ export default function Home() {
             <Sparkles className="h-6 w-6 text-[var(--color-accent)]" />
             <h2 className="mt-5 text-2xl font-semibold text-[var(--color-ink)]">Candidate shell</h2>
             <p className="mt-3 text-sm leading-7 text-[var(--color-ink-muted)]">
-              Wired to the real candidate dashboard API with placeholders for upload and interview flows.
+              Candidate overview, profile, document intake, interview assistant pages, and saved report history now sit on live backend APIs.
             </p>
           </section>
           <section className="rounded-[32px] border border-[var(--color-border)] bg-white/90 p-6 shadow-[0_24px_90px_-56px_rgba(13,18,39,0.55)]">
             <BriefcaseBusiness className="h-6 w-6 text-[var(--color-teal)]" />
             <h2 className="mt-5 text-2xl font-semibold text-[var(--color-ink)]">Recruiter shell</h2>
             <p className="mt-3 text-sm leading-7 text-[var(--color-ink-muted)]">
-              Wired to the recruiter summary endpoint with stable space for jobs, review, and report history screens.
+              Wired to recruiter dashboard, jobs, candidate intake, scoped uploads, and review summary endpoints.
             </p>
           </section>
           <section className="rounded-[32px] border border-[var(--color-border)] bg-white/90 p-6 shadow-[0_24px_90px_-56px_rgba(13,18,39,0.55)]">

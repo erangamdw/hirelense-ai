@@ -14,16 +14,20 @@ type NavItem = {
   href: string;
   label: string;
   icon: typeof Sparkles;
+  match: "exact" | "prefix";
 };
 
 const candidateNav: NavItem[] = [
-  { href: "/candidate", label: "Overview", icon: Sparkles },
-  { href: "/candidate#documents", label: "Documents", icon: FileSearch },
+  { href: "/candidate", label: "Overview", icon: Sparkles, match: "exact" },
+  { href: "/candidate/interview", label: "Assistant", icon: Sparkles, match: "prefix" },
+  { href: "/candidate/documents", label: "Documents", icon: FileSearch, match: "prefix" },
+  { href: "/candidate/reports", label: "Reports", icon: UserRoundSearch, match: "prefix" },
+  { href: "/candidate/profile", label: "Profile", icon: BriefcaseBusiness, match: "prefix" },
 ];
 
 const recruiterNav: NavItem[] = [
-  { href: "/recruiter", label: "Overview", icon: BriefcaseBusiness },
-  { href: "/recruiter#review", label: "Review", icon: UserRoundSearch },
+  { href: "/recruiter", label: "Overview", icon: BriefcaseBusiness, match: "exact" },
+  { href: "/recruiter/jobs", label: "Jobs", icon: UserRoundSearch, match: "prefix" },
 ];
 
 function getNav(role: UserRole) {
@@ -63,7 +67,10 @@ export function AppShell({
           <nav className="mt-10 flex flex-col gap-2">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive =
+                item.match === "exact"
+                  ? pathname === item.href
+                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}

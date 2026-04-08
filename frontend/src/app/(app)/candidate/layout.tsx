@@ -9,7 +9,7 @@ export default function CandidateLayout({
     <AppShell
       role="candidate"
       title="Candidate workspace"
-      subtitle="Shared shell for candidate flows. This foundation route already consumes the live dashboard summary endpoint."
+      subtitle="Live candidate workflow for profile setup, document intake, grounded interview prep, and saved report history on top of the FastAPI backend."
     >
       {children}
     </AppShell>

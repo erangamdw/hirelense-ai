@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user, get_db_session
@@ -11,21 +11,34 @@ from app.schemas.document import (
     DocumentChunkingResponse,
     DocumentIndexingResponse,
     DocumentResponse,
+    TextDocumentCreateRequest,
 )
 from app.services.documents import (
-    DocumentNotFoundError,
     DocumentChunkingError,
     DocumentIndexingError,
+    DocumentNotFoundError,
     DocumentParsingError,
     DocumentValidationError,
     chunk_stored_document,
     create_document_record,
     index_document_chunks,
+    list_documents_for_user,
     parse_stored_document,
     save_upload_file,
+    save_text_document,
 )
 
 router = APIRouter(prefix="/documents")
+
+
+@router.get("", response_model=list[DocumentResponse])
+def list_documents(
+    limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> list[DocumentResponse]:
+    documents = list_documents_for_user(db, user_id=current_user.id, limit=limit)
+    return [DocumentResponse.model_validate(document) for document in documents]
 
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -56,6 +69,37 @@ def upload_document(
         original_filename=original_filename,
         storage_path=storage_path,
         mime_type=file.content_type or "application/octet-stream",
+        size_bytes=size_bytes,
+    )
+    return DocumentResponse.model_validate(document)
+
+
+@router.post("/text", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+def create_text_document(
+    payload: TextDocumentCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> DocumentResponse:
+    try:
+        original_filename, storage_path, size_bytes = save_text_document(
+            title=payload.title,
+            content=payload.content,
+            user=current_user,
+            document_type=payload.document_type,
+        )
+    except DocumentValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    document = create_document_record(
+        db,
+        user=current_user,
+        document_type=payload.document_type,
+        original_filename=original_filename,
+        storage_path=storage_path,
+        mime_type="text/plain; charset=utf-8",
         size_bytes=size_bytes,
     )
     return DocumentResponse.model_validate(document)

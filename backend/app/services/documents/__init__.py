@@ -20,9 +20,12 @@ from app.services.documents.parsing import (
 from app.services.documents.upload import (
     ALLOWED_EXTENSIONS_BY_TYPE,
     DocumentValidationError,
+    TEXT_SUBMISSION_ALLOWED_TYPES,
     count_documents_for_user,
     create_document_record,
+    list_documents_for_user,
     save_upload_file,
+    save_text_document,
 )
 
 __all__ = [
@@ -35,6 +38,7 @@ __all__ = [
     "DocumentParsingError",
     "DocumentValidationError",
     "ParsingResult",
+    "TEXT_SUBMISSION_ALLOWED_TYPES",
     "build_chunk_drafts",
     "count_documents_for_user",
     "chunk_stored_document",
@@ -42,6 +46,8 @@ __all__ = [
     "create_langchain_documents",
     "get_owned_document",
     "index_document_chunks",
+    "list_documents_for_user",
     "parse_stored_document",
     "save_upload_file",
+    "save_text_document",
 ]

@@ -146,6 +146,17 @@ def test_candidate_document_pipeline_happy_path(tmp_path: Path, monkeypatch) -> 
         document_id = upload_json["id"]
         assert upload_json["indexing_status"] == "pending"
 
+        text_document_response = client.post(
+            "/documents/text",
+            headers=headers,
+            json={
+                "document_type": "job_description",
+                "title": "platform-engineer-jd",
+                "content": "Own backend APIs, retrieval quality, and platform reliability.",
+            },
+        )
+        assert text_document_response.status_code == 201
+
         parse_response = client.post(f"/documents/{document_id}/parse", headers=headers)
         assert parse_response.status_code == 200
         parse_json = parse_response.json()
@@ -165,11 +176,33 @@ def test_candidate_document_pipeline_happy_path(tmp_path: Path, monkeypatch) -> 
         assert len(reindex_json["vector_ids"]) == chunk_json["chunk_count"]
         assert reindex_json["indexing_status"] == DocumentIndexingStatus.SUCCEEDED.value
 
+        reports_response = client.post(
+            "/reports",
+            headers=headers,
+            json={
+                "report_type": "candidate_answer_guidance",
+                "query": "Tell me about yourself for platform engineering roles.",
+                "title": "Platform intro draft",
+                "payload": {"answer_draft": "I build reliable APIs and retrieval systems."},
+            },
+        )
+        assert reports_response.status_code == 201
+
+        list_documents_response = client.get("/documents", headers=headers)
+        assert list_documents_response.status_code == 200
+        list_documents_json = list_documents_response.json()
+        assert len(list_documents_json) == 2
+        assert [item["document_type"] for item in list_documents_json] == [
+            "job_description",
+            "project_notes",
+        ]
+
         dashboard_response = client.get("/candidate/dashboard", headers=headers)
         assert dashboard_response.status_code == 200
         dashboard_json = dashboard_response.json()
         assert dashboard_json["has_profile"] is True
-        assert dashboard_json["uploaded_document_count"] == 1
+        assert dashboard_json["uploaded_document_count"] == 2
+        assert dashboard_json["saved_report_count"] == 1
 
         collection = get_document_collection()
         stored_vectors = collection.get(where=build_metadata_filter(document_id=document_id))

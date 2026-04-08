@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
@@ -22,19 +23,16 @@ function formatDate(value: string) {
 
 export function RecruiterDashboard() {
   const { accessToken, status, user } = useAuth();
+  const isRecruiterSession = status === "authenticated" && !!accessToken && user?.role === "recruiter";
   const [summary, setSummary] = useState<RecruiterDashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status !== "authenticated" || !accessToken || user?.role !== "recruiter") {
-      setSummary(null);
-      setError(null);
-      setLoading(false);
+    if (!isRecruiterSession || !accessToken) {
       return;
     }
 
-    setLoading(true);
     fetchRecruiterDashboard(accessToken)
       .then((payload) => {
         setSummary(payload);
@@ -44,9 +42,9 @@ export function RecruiterDashboard() {
         setError(caughtError instanceof Error ? caughtError.message : "Could not load recruiter dashboard.");
       })
       .finally(() => setLoading(false));
-  }, [accessToken, status, user?.role]);
+  }, [accessToken, isRecruiterSession]);
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || (isRecruiterSession && loading)) {
     return <LoadingGrid />;
   }
 
@@ -154,11 +152,15 @@ export function RecruiterDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Next UI slice</CardTitle>
+            <CardTitle>Recruiter workspace actions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-[var(--color-ink-muted)]">
-            <p>Job list, job detail, candidate review, and report detail screens can now build on stable backend contracts.</p>
-            <p>This foundation milestone keeps the shell thin and aligned to the API that already exists.</p>
+          <CardContent className="space-y-3 text-sm">
+            <Link className="block rounded-2xl bg-white px-4 py-3 text-[var(--color-ink)] ring-1 ring-[var(--color-border)]" href="/recruiter/jobs">
+              Open recruiter jobs
+            </Link>
+            <p className="text-[var(--color-ink-muted)]">
+              Jobs, candidate intake, and recruiter-scoped upload pages now sit on the existing backend contracts.
+            </p>
           </CardContent>
         </Card>
       </div>
