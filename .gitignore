@@ -1,0 +1,58 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python backend
+backend/.venv/
+backend/venv/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.coverage
+backend/htmlcov/
+backend/*.sqlite3
+backend/*.db
+
+# Node / Next.js frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/coverage/
+
+# Env files
+.env
+.env.*
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+
+# Logs
+*.log
+logs/
+backend/logs/
+frontend/logs/
+
+# Uploads / local storage
+backend/uploads/
+backend/storage/
+backend/chroma_db/
+backend/chroma/
+backend/vector_store/
+
+# Build / temp
+tmp/
+temp/
+*.tmp
+
+# Internal project tracking docs
+docs/STATUS.md
+docs/NEXT_STEPS.md
+docs/PROMPTS.md
+docs/TASKS.md
+docs/ARCHITECTURE.md
+docs/PLAN.md
