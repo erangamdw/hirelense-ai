@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_candidate, get_current_recruiter
+from app.api.dependencies import get_current_candidate, get_current_recruiter, get_db_session
 from app.services.candidate import (
     CandidateStructuredRequest,
     generate_candidate_answer_guidance,
@@ -11,9 +12,13 @@ from app.services.candidate import (
     generate_candidate_star_answer,
 )
 from app.services.recruiter import (
+    RecruiterCandidateNotFoundError,
+    RecruiterJobNotFoundError,
     RecruiterStructuredRequest,
     generate_recruiter_fit_summary,
     generate_recruiter_interview_pack,
+    get_recruiter_candidate,
+    get_recruiter_job,
 )
 from app.core.config import get_settings
 from app.models.user import User, UserRole
@@ -48,9 +53,17 @@ def build_retrieval_response(
     payload: RetrievalQueryRequest,
     current_user: User,
     role: UserRole,
+    db: Session,
 ) -> RetrievalResponse:
     settings = get_settings()
     retriever = get_retriever_service()
+    recruiter_job_id, recruiter_candidate_id = validate_recruiter_scope_for_retrieval(
+        db=db,
+        current_user=current_user,
+        role=role,
+        recruiter_job_id=payload.recruiter_job_id,
+        recruiter_candidate_id=payload.recruiter_candidate_id,
+    )
     applied_document_types = resolve_document_types(role=role, requested=payload.document_types)
     evidence = retriever.retrieve(
         RetrievalRequest(
@@ -60,12 +73,16 @@ def build_retrieval_response(
             document_types=payload.document_types,
             top_k=payload.top_k,
             score_threshold=payload.score_threshold,
+            recruiter_job_id=recruiter_job_id,
+            recruiter_candidate_id=recruiter_candidate_id,
         )
     )
     return RetrievalResponse(
         query=payload.query,
         role=role.value,
         applied_document_types=applied_document_types,
+        recruiter_job_id=recruiter_job_id,
+        recruiter_candidate_id=recruiter_candidate_id,
         top_k=payload.top_k or settings.retrieval_top_k,
         score_threshold=payload.score_threshold if payload.score_threshold is not None else settings.retrieval_score_threshold,
         result_count=len(evidence),
@@ -78,8 +95,16 @@ def build_generation_response(
     payload: GenerationQueryRequest,
     current_user: User,
     role: UserRole,
+    db: Session,
 ) -> GenerationResponse:
     generation_service = get_generation_service()
+    recruiter_job_id, recruiter_candidate_id = validate_recruiter_scope_for_generation(
+        db=db,
+        current_user=current_user,
+        role=role,
+        recruiter_job_id=payload.recruiter_job_id,
+        recruiter_candidate_id=payload.recruiter_candidate_id,
+    )
     result = generation_service.generate(
         GroundedGenerationRequest(
             query=payload.query,
@@ -89,6 +114,8 @@ def build_generation_response(
             document_types=payload.document_types,
             top_k=payload.top_k,
             score_threshold=payload.score_threshold,
+            recruiter_job_id=recruiter_job_id,
+            recruiter_candidate_id=recruiter_candidate_id,
             model_override=payload.model_override,
             use_upgrade_model=payload.use_upgrade_model,
             temperature=payload.temperature,
@@ -99,6 +126,8 @@ def build_generation_response(
         query=payload.query,
         role=role.value,
         prompt_type=payload.prompt_type,
+        recruiter_job_id=result.recruiter_job_id,
+        recruiter_candidate_id=result.recruiter_candidate_id,
         provider=result.provider,
         model=result.model,
         temperature=result.temperature,
@@ -114,12 +143,14 @@ def build_generation_response(
 def retrieve_candidate_evidence(
     payload: RetrievalQueryRequest,
     current_user: User = Depends(get_current_candidate),
+    db: Session = Depends(get_db_session),
 ) -> RetrievalResponse:
     try:
         return build_retrieval_response(
             payload=payload,
             current_user=current_user,
             role=UserRole.CANDIDATE,
+            db=db,
         )
     except RetrievalError as exc:
         raise HTTPException(
@@ -132,12 +163,14 @@ def retrieve_candidate_evidence(
 def retrieve_recruiter_evidence(
     payload: RetrievalQueryRequest,
     current_user: User = Depends(get_current_recruiter),
+    db: Session = Depends(get_db_session),
 ) -> RetrievalResponse:
     try:
         return build_retrieval_response(
             payload=payload,
             current_user=current_user,
             role=UserRole.RECRUITER,
+            db=db,
         )
     except RetrievalError as exc:
         raise HTTPException(
@@ -150,12 +183,14 @@ def retrieve_recruiter_evidence(
 def generate_candidate_output(
     payload: GenerationQueryRequest,
     current_user: User = Depends(get_current_candidate),
+    db: Session = Depends(get_db_session),
 ) -> GenerationResponse:
     try:
         return build_generation_response(
             payload=payload,
             current_user=current_user,
             role=UserRole.CANDIDATE,
+            db=db,
         )
     except GroundedGenerationError as exc:
         raise HTTPException(
@@ -186,13 +221,23 @@ def build_recruiter_structured_request(
     *,
     payload: RecruiterGenerationRequest,
     current_user: User,
+    db: Session,
 ) -> RecruiterStructuredRequest:
+    recruiter_job_id, recruiter_candidate_id = validate_recruiter_scope_for_generation(
+        db=db,
+        current_user=current_user,
+        role=UserRole.RECRUITER,
+        recruiter_job_id=payload.recruiter_job_id,
+        recruiter_candidate_id=payload.recruiter_candidate_id,
+    )
     return RecruiterStructuredRequest(
         query=payload.query,
         user=current_user,
         document_types=payload.document_types,
         top_k=payload.top_k,
         score_threshold=payload.score_threshold,
+        recruiter_job_id=recruiter_job_id,
+        recruiter_candidate_id=recruiter_candidate_id,
         model_override=payload.model_override,
         use_upgrade_model=payload.use_upgrade_model,
         temperature=payload.temperature,
@@ -276,11 +321,12 @@ def generate_candidate_skill_gap_analysis_output(
 def generate_recruiter_fit_summary_output(
     payload: RecruiterGenerationRequest,
     current_user: User = Depends(get_current_recruiter),
+    db: Session = Depends(get_db_session),
 ) -> RecruiterFitSummaryResponse:
     try:
         return RecruiterFitSummaryResponse.model_validate(
             generate_recruiter_fit_summary(
-                build_recruiter_structured_request(payload=payload, current_user=current_user)
+                build_recruiter_structured_request(payload=payload, current_user=current_user, db=db)
             )
         )
     except GroundedGenerationError as exc:
@@ -294,11 +340,12 @@ def generate_recruiter_fit_summary_output(
 def generate_recruiter_interview_pack_output(
     payload: RecruiterGenerationRequest,
     current_user: User = Depends(get_current_recruiter),
+    db: Session = Depends(get_db_session),
 ) -> RecruiterInterviewPackResponse:
     try:
         return RecruiterInterviewPackResponse.model_validate(
             generate_recruiter_interview_pack(
-                build_recruiter_structured_request(payload=payload, current_user=current_user)
+                build_recruiter_structured_request(payload=payload, current_user=current_user, db=db)
             )
         )
     except GroundedGenerationError as exc:
@@ -312,15 +359,91 @@ def generate_recruiter_interview_pack_output(
 def generate_recruiter_output(
     payload: GenerationQueryRequest,
     current_user: User = Depends(get_current_recruiter),
+    db: Session = Depends(get_db_session),
 ) -> GenerationResponse:
     try:
         return build_generation_response(
             payload=payload,
             current_user=current_user,
             role=UserRole.RECRUITER,
+            db=db,
         )
     except GroundedGenerationError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
+
+def validate_recruiter_scope_for_retrieval(
+    *,
+    db: Session,
+    current_user: User,
+    role: UserRole,
+    recruiter_job_id: int | None,
+    recruiter_candidate_id: int | None,
+) -> tuple[int | None, int | None]:
+    try:
+        return resolve_recruiter_scope(
+            db=db,
+            current_user=current_user,
+            role=role,
+            recruiter_job_id=recruiter_job_id,
+            recruiter_candidate_id=recruiter_candidate_id,
+        )
+    except ValueError as exc:
+        raise RetrievalError(str(exc)) from exc
+
+
+def validate_recruiter_scope_for_generation(
+    *,
+    db: Session,
+    current_user: User,
+    role: UserRole,
+    recruiter_job_id: int | None,
+    recruiter_candidate_id: int | None,
+) -> tuple[int | None, int | None]:
+    try:
+        return resolve_recruiter_scope(
+            db=db,
+            current_user=current_user,
+            role=role,
+            recruiter_job_id=recruiter_job_id,
+            recruiter_candidate_id=recruiter_candidate_id,
+        )
+    except ValueError as exc:
+        raise GroundedGenerationError(str(exc)) from exc
+
+
+def resolve_recruiter_scope(
+    *,
+    db: Session,
+    current_user: User,
+    role: UserRole,
+    recruiter_job_id: int | None,
+    recruiter_candidate_id: int | None,
+) -> tuple[int | None, int | None]:
+    if role != UserRole.RECRUITER:
+        if recruiter_job_id is not None or recruiter_candidate_id is not None:
+            raise ValueError("Recruiter job and candidate scoping is only available to recruiters.")
+        return None, None
+
+    resolved_job_id = recruiter_job_id
+    resolved_candidate_id = recruiter_candidate_id
+
+    try:
+        if recruiter_job_id is not None:
+            get_recruiter_job(db, recruiter=current_user, job_id=recruiter_job_id)
+        if recruiter_candidate_id is not None:
+            candidate = get_recruiter_candidate(
+                db,
+                recruiter=current_user,
+                job_id=recruiter_job_id,
+                candidate_id=recruiter_candidate_id,
+            )
+            resolved_job_id = candidate.job_id
+            resolved_candidate_id = candidate.id
+    except (RecruiterJobNotFoundError, RecruiterCandidateNotFoundError) as exc:
+        raise ValueError(str(exc)) from exc
+
+    return resolved_job_id, resolved_candidate_id

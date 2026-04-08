@@ -56,3 +56,21 @@ class User(Base):
         back_populates="owner",
         cascade="all, delete-orphan",
     )
+    recruiter_jobs = relationship(
+        "RecruiterJob",
+        back_populates="recruiter",
+        cascade="all, delete-orphan",
+        order_by="RecruiterJob.created_at.desc()",
+    )
+    recruiter_candidates = relationship(
+        "RecruiterCandidate",
+        back_populates="recruiter",
+        cascade="all, delete-orphan",
+        order_by="RecruiterCandidate.created_at.desc()",
+    )
+    saved_reports = relationship(
+        "SavedReport",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        order_by="SavedReport.created_at.desc()",
+    )

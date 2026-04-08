@@ -10,6 +10,8 @@ class RetrievalQueryRequest(BaseModel):
     document_types: list[DocumentType] | None = None
     top_k: int | None = Field(default=None, ge=1, le=20)
     score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
+    recruiter_job_id: int | None = Field(default=None, ge=1)
+    recruiter_candidate_id: int | None = Field(default=None, ge=1)
 
 
 class EvidenceChunkResponse(BaseModel):
@@ -20,6 +22,8 @@ class EvidenceChunkResponse(BaseModel):
     source_label: str
     owner_role: str
     owner_user_id: int
+    recruiter_job_id: int | None
+    recruiter_candidate_id: int | None
     section_title: str | None
     page_number: int | None
     content: str
@@ -32,6 +36,8 @@ class RetrievalResponse(BaseModel):
     query: str
     role: str
     applied_document_types: list[DocumentType]
+    recruiter_job_id: int | None
+    recruiter_candidate_id: int | None
     top_k: int
     score_threshold: float
     result_count: int

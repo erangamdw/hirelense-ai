@@ -79,6 +79,8 @@ def base_chunk_metadata(document: Document) -> dict[str, object]:
         "document_type": document.document_type.value,
         "owner_role": owner_role,
         "owner_user_id": document.owner_user_id,
+        "recruiter_job_id": document.recruiter_job_id,
+        "recruiter_candidate_id": document.recruiter_candidate_id,
         "original_filename": document.original_filename,
         "source_label": build_source_label(document),
     }

@@ -62,6 +62,8 @@ def build_metadata_filter(
     owner_user_id: int | None = None,
     document_type: str | None = None,
     owner_role: str | None = None,
+    recruiter_job_id: int | None = None,
+    recruiter_candidate_id: int | None = None,
 ) -> dict[str, object] | None:
     conditions: list[dict[str, object]] = []
     if document_id is not None:
@@ -72,6 +74,10 @@ def build_metadata_filter(
         conditions.append({"document_type": document_type})
     if owner_role is not None:
         conditions.append({"owner_role": owner_role})
+    if recruiter_job_id is not None:
+        conditions.append({"recruiter_job_id": recruiter_job_id})
+    if recruiter_candidate_id is not None:
+        conditions.append({"recruiter_candidate_id": recruiter_candidate_id})
     if not conditions:
         return None
     if len(conditions) == 1:

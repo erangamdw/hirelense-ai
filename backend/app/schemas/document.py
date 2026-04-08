@@ -13,6 +13,8 @@ class DocumentResponse(BaseModel):
 
     id: int
     owner_user_id: int
+    recruiter_job_id: int | None
+    recruiter_candidate_id: int | None
     document_type: DocumentType
     original_filename: str
     stored_filename: str

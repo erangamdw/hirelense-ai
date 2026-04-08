@@ -86,10 +86,14 @@ def create_document_record(
     storage_path: str,
     mime_type: str,
     size_bytes: int,
+    recruiter_job_id: int | None = None,
+    recruiter_candidate_id: int | None = None,
 ) -> Document:
     stored_filename = Path(storage_path).name
     document = Document(
         owner_user_id=user.id,
+        recruiter_job_id=recruiter_job_id,
+        recruiter_candidate_id=recruiter_candidate_id,
         document_type=document_type,
         original_filename=original_filename,
         stored_filename=stored_filename,

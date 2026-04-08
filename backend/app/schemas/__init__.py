@@ -33,6 +33,20 @@ from app.schemas.generation import (
     RecruiterStrengthSignalResponse,
     SkillGapSeverity,
 )
+from app.schemas.recruiter import (
+    RecruiterCandidateIntakeCreate,
+    RecruiterCandidateResponse,
+    RecruiterJobCreate,
+    RecruiterJobDetailResponse,
+    RecruiterJobListItemResponse,
+    RecruiterJobListResponse,
+)
+from app.schemas.report import (
+    SavedReportCreateRequest,
+    SavedReportHistoryResponse,
+    SavedReportListItemResponse,
+    SavedReportResponse,
+)
 from app.schemas.retrieval import EvidenceChunkResponse, RetrievalQueryRequest, RetrievalResponse
 
 __all__ = [
@@ -61,13 +75,23 @@ __all__ = [
     "GroundedPromptType",
     "LoginRequest",
     "RecruiterConcernResponse",
+    "RecruiterCandidateIntakeCreate",
+    "RecruiterCandidateResponse",
     "RecruiterFitSummaryResponse",
     "RecruiterGenerationRequest",
     "RecruiterInterviewPackResponse",
     "RecruiterInterviewProbeResponse",
+    "RecruiterJobCreate",
+    "RecruiterJobDetailResponse",
+    "RecruiterJobListItemResponse",
+    "RecruiterJobListResponse",
     "RecruiterStrengthSignalResponse",
     "RetrievalQueryRequest",
     "RetrievalResponse",
     "RegisterRequest",
+    "SavedReportCreateRequest",
+    "SavedReportHistoryResponse",
+    "SavedReportListItemResponse",
+    "SavedReportResponse",
     "SkillGapSeverity",
 ]

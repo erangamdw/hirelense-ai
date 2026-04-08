@@ -37,6 +37,8 @@ class RecruiterStructuredRequest:
     document_types: list[DocumentType] | None = None
     top_k: int | None = None
     score_threshold: float | None = None
+    recruiter_job_id: int | None = None
+    recruiter_candidate_id: int | None = None
     model_override: str | None = None
     use_upgrade_model: bool = False
     temperature: float | None = None
@@ -53,6 +55,8 @@ def generate_recruiter_fit_summary(request: RecruiterStructuredRequest):
             document_types=request.document_types,
             top_k=request.top_k,
             score_threshold=request.score_threshold,
+            recruiter_job_id=request.recruiter_job_id,
+            recruiter_candidate_id=request.recruiter_candidate_id,
             model_override=request.model_override,
             use_upgrade_model=request.use_upgrade_model,
             temperature=request.temperature,
@@ -67,6 +71,8 @@ def generate_recruiter_fit_summary(request: RecruiterStructuredRequest):
     )
     return {
         "query": request.query,
+        "recruiter_job_id": request.recruiter_job_id,
+        "recruiter_candidate_id": request.recruiter_candidate_id,
         "provider": generation.provider,
         "model": generation.model,
         "temperature": generation.temperature,
@@ -92,6 +98,8 @@ def generate_recruiter_interview_pack(request: RecruiterStructuredRequest):
             document_types=request.document_types,
             top_k=request.top_k,
             score_threshold=request.score_threshold,
+            recruiter_job_id=request.recruiter_job_id,
+            recruiter_candidate_id=request.recruiter_candidate_id,
             model_override=request.model_override,
             use_upgrade_model=request.use_upgrade_model,
             temperature=request.temperature,
@@ -102,6 +110,8 @@ def generate_recruiter_interview_pack(request: RecruiterStructuredRequest):
     probes = build_recruiter_probes(query=request.query, evidence=generation.evidence)
     return {
         "query": request.query,
+        "recruiter_job_id": request.recruiter_job_id,
+        "recruiter_candidate_id": request.recruiter_candidate_id,
         "provider": generation.provider,
         "model": generation.model,
         "temperature": generation.temperature,

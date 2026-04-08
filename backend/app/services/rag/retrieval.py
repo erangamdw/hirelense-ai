@@ -35,6 +35,8 @@ class RetrievalRequest:
     document_types: list[DocumentType] | None = None
     top_k: int | None = None
     score_threshold: float | None = None
+    recruiter_job_id: int | None = None
+    recruiter_candidate_id: int | None = None
 
 
 class RetrievalError(Exception):
@@ -78,6 +80,8 @@ class ChromaRetrieverService(RetrieverService):
         base_filter = build_metadata_filter(
             owner_user_id=request.user.id,
             owner_role=request.role.value,
+            recruiter_job_id=request.recruiter_job_id,
+            recruiter_candidate_id=request.recruiter_candidate_id if request.recruiter_job_id is None else None,
         )
 
         try:
@@ -108,6 +112,8 @@ class ChromaRetrieverService(RetrieverService):
             document_type_value = str(metadata.get("document_type", ""))
             if document_type_value not in allowed_document_type_values:
                 continue
+            if not matches_recruiter_scope(metadata=metadata, request=request):
+                continue
 
             normalized_content = " ".join(str(content).split())
             if not normalized_content or normalized_content in seen_contents:
@@ -131,6 +137,10 @@ class ChromaRetrieverService(RetrieverService):
                     source_label=source_label,
                     owner_role=str(metadata.get("owner_role") or request.role.value),
                     owner_user_id=int(metadata.get("owner_user_id") or request.user.id),
+                    recruiter_job_id=int(metadata["recruiter_job_id"]) if metadata.get("recruiter_job_id") is not None else None,
+                    recruiter_candidate_id=int(metadata["recruiter_candidate_id"])
+                    if metadata.get("recruiter_candidate_id") is not None
+                    else None,
                     section_title=section_title if isinstance(section_title, str) else None,
                     page_number=int(page_number) if isinstance(page_number, int) else None,
                     content=normalized_content,
@@ -149,6 +159,24 @@ class ChromaRetrieverService(RetrieverService):
                 break
 
         return evidence
+
+
+def matches_recruiter_scope(*, metadata: dict[str, object], request: RetrievalRequest) -> bool:
+    metadata_job_id = int(metadata["recruiter_job_id"]) if metadata.get("recruiter_job_id") is not None else None
+    metadata_candidate_id = (
+        int(metadata["recruiter_candidate_id"]) if metadata.get("recruiter_candidate_id") is not None else None
+    )
+
+    if request.recruiter_job_id is not None and metadata_job_id != request.recruiter_job_id:
+        return False
+
+    if request.recruiter_candidate_id is None:
+        return True
+
+    if request.recruiter_job_id is None:
+        return metadata_candidate_id == request.recruiter_candidate_id
+
+    return metadata_candidate_id in {None, request.recruiter_candidate_id}
 
 
 def get_retriever_service() -> RetrieverService:

@@ -23,6 +23,8 @@ class GenerationQueryRequest(BaseModel):
     document_types: list[DocumentType] | None = None
     top_k: int | None = Field(default=None, ge=1, le=20)
     score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
+    recruiter_job_id: int | None = Field(default=None, ge=1)
+    recruiter_candidate_id: int | None = Field(default=None, ge=1)
     model_override: str | None = Field(default=None, min_length=1, max_length=120)
     use_upgrade_model: bool = False
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
@@ -33,6 +35,8 @@ class GenerationResponse(BaseModel):
     query: str
     role: str
     prompt_type: GroundedPromptType
+    recruiter_job_id: int | None
+    recruiter_candidate_id: int | None
     provider: str
     model: str
     temperature: float
@@ -59,6 +63,8 @@ class RecruiterGenerationRequest(BaseModel):
     document_types: list[DocumentType] | None = None
     top_k: int | None = Field(default=None, ge=1, le=20)
     score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
+    recruiter_job_id: int | None = Field(default=None, ge=1)
+    recruiter_candidate_id: int | None = Field(default=None, ge=1)
     model_override: str | None = Field(default=None, min_length=1, max_length=120)
     use_upgrade_model: bool = False
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
@@ -172,6 +178,8 @@ class RecruiterConcernResponse(BaseModel):
 
 class RecruiterFitSummaryResponse(BaseModel):
     query: str
+    recruiter_job_id: int | None
+    recruiter_candidate_id: int | None
     provider: str
     model: str
     temperature: float
@@ -195,6 +203,8 @@ class RecruiterInterviewProbeResponse(BaseModel):
 
 class RecruiterInterviewPackResponse(BaseModel):
     query: str
+    recruiter_job_id: int | None
+    recruiter_candidate_id: int | None
     provider: str
     model: str
     temperature: float

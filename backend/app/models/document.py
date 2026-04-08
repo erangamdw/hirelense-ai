@@ -38,6 +38,16 @@ class Document(Base):
         nullable=False,
         index=True,
     )
+    recruiter_job_id: Mapped[int | None] = mapped_column(
+        ForeignKey("recruiter_jobs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    recruiter_candidate_id: Mapped[int | None] = mapped_column(
+        ForeignKey("recruiter_candidates.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     document_type: Mapped[DocumentType] = mapped_column(
         SqlEnum(
             DocumentType,
@@ -84,6 +94,8 @@ class Document(Base):
     )
 
     owner = relationship("User", back_populates="documents")
+    recruiter_job = relationship("RecruiterJob", back_populates="documents")
+    recruiter_candidate = relationship("RecruiterCandidate", back_populates="documents")
     chunks = relationship(
         "Chunk",
         back_populates="document",

@@ -36,6 +36,8 @@ class GroundedGenerationRequest:
     document_types: list[DocumentType] | None = None
     top_k: int | None = None
     score_threshold: float | None = None
+    recruiter_job_id: int | None = None
+    recruiter_candidate_id: int | None = None
     model_override: str | None = None
     use_upgrade_model: bool = False
     temperature: float | None = None
@@ -50,6 +52,8 @@ class GroundedGenerationResult:
     temperature: float
     max_output_tokens: int
     applied_document_types: list[DocumentType]
+    recruiter_job_id: int | None
+    recruiter_candidate_id: int | None
     evidence: list[EvidenceChunkResponse]
 
 
@@ -78,6 +82,8 @@ class RetrievalBackedGenerationService(GroundedGenerationService):
                     document_types=applied_document_types,
                     top_k=request.top_k,
                     score_threshold=request.score_threshold,
+                    recruiter_job_id=request.recruiter_job_id,
+                    recruiter_candidate_id=request.recruiter_candidate_id,
                 )
             )
             prompt_bundle = build_grounded_prompt(
@@ -106,6 +112,8 @@ class RetrievalBackedGenerationService(GroundedGenerationService):
             temperature=generation.temperature,
             max_output_tokens=generation.max_output_tokens,
             applied_document_types=applied_document_types,
+            recruiter_job_id=request.recruiter_job_id,
+            recruiter_candidate_id=request.recruiter_candidate_id,
             evidence=evidence,
         )
 
