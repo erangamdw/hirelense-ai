@@ -6,6 +6,7 @@ from app.schemas.candidate_profile import (
     CandidateProfileResponse,
     CandidateProfileUpdate,
 )
+from app.schemas.document import DocumentResponse
 
 __all__ = [
     "AuthResponse",
@@ -14,6 +15,7 @@ __all__ = [
     "CandidateProfileResponse",
     "CandidateProfileUpdate",
     "CurrentUserResponse",
+    "DocumentResponse",
     "LoginRequest",
     "RegisterRequest",
 ]

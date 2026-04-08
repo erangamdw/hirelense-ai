@@ -51,3 +51,8 @@ class User(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    documents = relationship(
+        "Document",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )

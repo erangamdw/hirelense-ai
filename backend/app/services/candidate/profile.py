@@ -10,6 +10,7 @@ from app.schemas.candidate_profile import (
     CandidateProfileCreate,
     CandidateProfileUpdate,
 )
+from app.services.documents import count_documents_for_user
 
 
 class CandidateProfileExistsError(Exception):
@@ -85,7 +86,7 @@ def build_candidate_dashboard_summary(db: Session, *, user: User) -> CandidateDa
         full_name=user.full_name,
         has_profile=profile is not None,
         target_roles=profile.target_roles if profile is not None else [],
-        uploaded_document_count=0,
+        uploaded_document_count=count_documents_for_user(db, user_id=user.id),
         saved_report_count=0,
         latest_interview_sessions=[],
     )
