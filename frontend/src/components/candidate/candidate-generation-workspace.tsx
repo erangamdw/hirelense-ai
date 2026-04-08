@@ -1,10 +1,11 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import Link from "next/link";
 
 import { CandidateAssistantNav } from "@/components/candidate/candidate-assistant-nav";
 import { CandidateEvidenceSidePanel } from "@/components/candidate/candidate-evidence-side-panel";
+import { CandidateEvidenceViewer } from "@/components/candidate/candidate-evidence-viewer";
 import { useAuth } from "@/components/providers/auth-provider";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
@@ -18,6 +19,7 @@ import type {
   CandidateGeneratedReportBase,
   CandidateGenerationPayload,
   DocumentType,
+  EvidenceChunk,
   ReportType,
 } from "@/lib/api/types";
 import { formatLabel } from "@/lib/utils";
@@ -43,22 +45,57 @@ function toPayloadRecord<T extends CandidateGeneratedReportBase>(value: T): Reco
   return value as Record<string, unknown>;
 }
 
+type EvidenceViewerContextValue = {
+  canOpenEvidence: boolean;
+  openEvidence: (chunkIds: number[]) => void;
+};
+
+const EvidenceViewerContext = createContext<EvidenceViewerContextValue | null>(null);
+
+function filterAvailableChunkIds(chunkIds: number[], evidence: EvidenceChunk[]) {
+  const availableChunkIds = new Set(evidence.map((item) => item.chunk_id));
+  const uniqueChunkIds: number[] = [];
+
+  chunkIds.forEach((chunkId) => {
+    if (availableChunkIds.has(chunkId) && !uniqueChunkIds.includes(chunkId)) {
+      uniqueChunkIds.push(chunkId);
+    }
+  });
+
+  return uniqueChunkIds;
+}
+
 export function CitationLinks({ chunkIds }: { chunkIds: number[] }) {
-  if (!chunkIds.length) {
+  const evidenceViewer = useContext(EvidenceViewerContext);
+  const uniqueChunkIds = chunkIds.filter((chunkId, index) => chunkIds.indexOf(chunkId) === index);
+
+  if (!uniqueChunkIds.length) {
     return null;
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs uppercase tracking-[0.2em] text-[var(--color-ink-soft)]">Citations</span>
-      {chunkIds.map((chunkId) => (
-        <a
+      {uniqueChunkIds.length > 1 ? (
+        <button
+          type="button"
+          disabled={!evidenceViewer?.canOpenEvidence}
+          onClick={() => evidenceViewer?.openEvidence(uniqueChunkIds)}
+          className="rounded-full bg-[var(--color-ink)] px-3 py-1 text-xs font-semibold text-[var(--color-paper)] transition-colors hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Open all
+        </button>
+      ) : null}
+      {uniqueChunkIds.map((chunkId) => (
+        <button
           key={chunkId}
-          href={`#evidence-${chunkId}`}
-          className="rounded-full bg-[var(--color-panel)] px-3 py-1 text-xs font-semibold text-[var(--color-ink)] ring-1 ring-[var(--color-border)]"
+          type="button"
+          disabled={!evidenceViewer?.canOpenEvidence}
+          onClick={() => evidenceViewer?.openEvidence([chunkId])}
+          className="rounded-full bg-[var(--color-panel)] px-3 py-1 text-xs font-semibold text-[var(--color-ink)] ring-1 ring-[var(--color-border)] transition-colors hover:bg-[var(--color-panel-strong)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {`C${chunkId}`}
-        </a>
+        </button>
       ))}
     </div>
   );
@@ -137,6 +174,50 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [viewerChunkIds, setViewerChunkIds] = useState<number[]>([]);
+  const [activeEvidenceChunkId, setActiveEvidenceChunkId] = useState<number | null>(null);
+  const evidence = result?.evidence ?? [];
+
+  useEffect(() => {
+    setQuery(defaultQuery);
+    setSelectedDocumentTypes(documentTypeOptions.map((item) => item.value));
+    setResult(null);
+    setError(null);
+    setSaveMessage(null);
+    setIsGenerating(false);
+    setIsSaving(false);
+    setViewerChunkIds([]);
+    setActiveEvidenceChunkId(null);
+  }, [defaultQuery, reportType]);
+
+  useEffect(() => {
+    if (!activeEvidenceChunkId) {
+      return;
+    }
+
+    const currentEvidence = result?.evidence ?? [];
+    const activeChunkStillExists = currentEvidence.some((item) => item.chunk_id === activeEvidenceChunkId);
+    if (!activeChunkStillExists) {
+      setViewerChunkIds([]);
+      setActiveEvidenceChunkId(null);
+    }
+  }, [activeEvidenceChunkId, result]);
+
+  function openEvidence(chunkIds: number[]) {
+    const availableChunkIds = filterAvailableChunkIds(chunkIds, evidence);
+
+    if (!availableChunkIds.length) {
+      return;
+    }
+
+    setViewerChunkIds(availableChunkIds);
+    setActiveEvidenceChunkId((current) => (current && availableChunkIds.includes(current) ? current : availableChunkIds[0]));
+  }
+
+  function closeEvidenceViewer() {
+    setViewerChunkIds([]);
+    setActiveEvidenceChunkId(null);
+  }
 
   function toggleDocumentType(documentType: DocumentType) {
     setSelectedDocumentTypes((current) => {
@@ -164,6 +245,8 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
     setIsGenerating(true);
     setError(null);
     setSaveMessage(null);
+    setResult(null);
+    closeEvidenceViewer();
 
     try {
       const payload = await generate(accessToken, {
@@ -232,83 +315,93 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
   }
 
   return (
-    <div className="space-y-6">
-      <CandidateAssistantNav />
+    <EvidenceViewerContext.Provider value={{ canOpenEvidence: evidence.length > 0, openEvidence }}>
+      <div className="space-y-6">
+        <CandidateAssistantNav />
 
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{title}</CardTitle>
-              <CardDescription>{description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--color-ink)]" htmlFor="candidate-generation-query">
-                  {promptLabel}
-                </label>
-                <Textarea
-                  id="candidate-generation-query"
-                  className="min-h-36"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={promptPlaceholder}
-                />
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-[var(--color-ink)]">Document scope</p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {documentTypeOptions.map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-ink)]"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedDocumentTypes.includes(option.value)}
-                        onChange={() => toggleDocumentType(option.value)}
-                        className="mt-1 h-4 w-4 rounded border-[var(--color-border)]"
-                      />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[var(--color-ink)]" htmlFor="candidate-generation-query">
+                    {promptLabel}
+                  </label>
+                  <Textarea
+                    id="candidate-generation-query"
+                    className="min-h-36"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={promptPlaceholder}
+                  />
                 </div>
-              </div>
 
-              {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-[var(--color-ink)]">Document scope</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {documentTypeOptions.map((option) => (
+                      <label
+                        key={option.value}
+                        className="flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-ink)]"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedDocumentTypes.includes(option.value)}
+                          onChange={() => toggleDocumentType(option.value)}
+                          className="mt-1 h-4 w-4 rounded border-[var(--color-border)]"
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-              <div className="flex flex-wrap gap-3">
-                <Button type="button" disabled={isGenerating} onClick={() => void handleGenerate()}>
-                  {isGenerating ? generatingButtonLabel : generateButtonLabel}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={isSaving || result === null}
-                  onClick={() => void handleSave()}
-                >
-                  {isSaving ? "Saving report..." : "Save report"}
-                </Button>
-                <Link href="/candidate/reports" className="inline-flex h-11 items-center text-sm font-semibold text-[var(--color-accent)]">
-                  Open saved reports
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+                {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
 
-          {result ? (
-            <>
-              {renderResult(result)}
-              <GenerationMetaCard result={result} saveMessage={saveMessage} />
-            </>
-          ) : (
-            <EmptyState title={emptyResultTitle} message={emptyResultMessage} />
-          )}
+                <div className="flex flex-wrap gap-3">
+                  <Button type="button" disabled={isGenerating} onClick={() => void handleGenerate()}>
+                    {isGenerating ? generatingButtonLabel : generateButtonLabel}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={isSaving || result === null}
+                    onClick={() => void handleSave()}
+                  >
+                    {isSaving ? "Saving report..." : "Save report"}
+                  </Button>
+                  <Link href="/candidate/reports" className="inline-flex h-11 items-center text-sm font-semibold text-[var(--color-accent)]">
+                    Open saved reports
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            {result ? (
+              <>
+                {renderResult(result)}
+                <GenerationMetaCard result={result} saveMessage={saveMessage} />
+              </>
+            ) : (
+              <EmptyState title={emptyResultTitle} message={emptyResultMessage} />
+            )}
+          </div>
+
+          <CandidateEvidenceSidePanel evidence={evidence} onOpenEvidence={(chunkId) => openEvidence([chunkId])} />
         </div>
 
-        <CandidateEvidenceSidePanel evidence={result?.evidence ?? []} />
+        <CandidateEvidenceViewer
+          evidence={evidence}
+          activeChunkId={activeEvidenceChunkId}
+          availableChunkIds={viewerChunkIds}
+          onSelectChunk={setActiveEvidenceChunkId}
+          onClose={closeEvidenceViewer}
+        />
       </div>
-    </div>
+    </EvidenceViewerContext.Provider>
   );
 }

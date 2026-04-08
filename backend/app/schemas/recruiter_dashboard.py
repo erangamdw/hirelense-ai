@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.models.recruiter import RecruiterCandidateStatus
 from app.models.report import ReportType
 
 
@@ -33,6 +34,7 @@ class RecruiterJobReviewCandidateResponse(BaseModel):
     full_name: str
     current_title: str | None
     notes: str | None
+    shortlist_status: RecruiterCandidateStatus
     document_count: int
     report_count: int
     latest_report_title: str | None
@@ -63,6 +65,7 @@ class RecruiterCandidateReviewResponse(BaseModel):
     email: str | None
     current_title: str | None
     notes: str | None
+    shortlist_status: RecruiterCandidateStatus
     document_count: int
     document_types: list[str] = Field(default_factory=list)
     report_count: int
@@ -70,3 +73,42 @@ class RecruiterCandidateReviewResponse(BaseModel):
     latest_report_type: ReportType | None
     latest_report_created_at: datetime | None
     report_history: list[RecruiterDashboardRecentReportResponse] = Field(default_factory=list)
+
+
+class RecruiterComparisonStrengthResponse(BaseModel):
+    title: str
+    summary: str
+    evidence_chunk_ids: list[int] = Field(default_factory=list)
+
+
+class RecruiterComparisonConcernResponse(BaseModel):
+    title: str
+    summary: str
+    evidence_chunk_ids: list[int] = Field(default_factory=list)
+
+
+class RecruiterCandidateComparisonItemResponse(BaseModel):
+    candidate_id: int
+    full_name: str
+    current_title: str | None
+    notes: str | None
+    shortlist_status: RecruiterCandidateStatus
+    document_count: int
+    report_count: int
+    latest_fit_summary_report_id: int | None
+    latest_fit_summary_title: str | None
+    latest_fit_summary_created_at: datetime | None
+    fit_summary_summary: str | None
+    fit_summary_recommendation: str | None
+    strengths: list[RecruiterComparisonStrengthResponse] = Field(default_factory=list)
+    concerns: list[RecruiterComparisonConcernResponse] = Field(default_factory=list)
+    missing_evidence_areas: list[str] = Field(default_factory=list)
+    needs_fit_summary: bool = False
+
+
+class RecruiterCandidateComparisonResponse(BaseModel):
+    job_id: int
+    title: str
+    description: str
+    candidate_count: int
+    candidates: list[RecruiterCandidateComparisonItemResponse] = Field(default_factory=list)

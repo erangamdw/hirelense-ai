@@ -9,7 +9,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-export function RegisterForm() {
+type RegisterFormProps = {
+  title?: string;
+  description?: string;
+  initialRole?: "candidate" | "recruiter";
+  lockRole?: boolean;
+  submitLabel?: string;
+};
+
+export function RegisterForm({
+  title = "Create account",
+  description = "Foundation register flow for candidate and recruiter roles.",
+  initialRole = "candidate",
+  lockRole = false,
+  submitLabel = "Create account",
+}: RegisterFormProps = {}) {
   const router = useRouter();
   const { register } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -18,8 +32,8 @@ export function RegisterForm() {
   return (
     <Card className="w-full max-w-xl">
       <CardHeader>
-        <CardTitle>Create account</CardTitle>
-        <CardDescription>Foundation register flow for candidate and recruiter roles.</CardDescription>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -30,7 +44,7 @@ export function RegisterForm() {
             const fullName = String(formData.get("full_name") || "").trim();
             const email = String(formData.get("email") || "").trim();
             const password = String(formData.get("password") || "");
-            const role = String(formData.get("role") || "candidate") as "candidate" | "recruiter";
+            const role = String(formData.get("role") || initialRole) as "candidate" | "recruiter";
             setError(null);
 
             startTransition(async () => {
@@ -70,19 +84,28 @@ export function RegisterForm() {
             <label className="text-sm font-medium text-[var(--color-ink)]" htmlFor="role">
               Role
             </label>
-            <select
-              id="role"
-              name="role"
-              defaultValue="candidate"
-              className="flex h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-ink)] outline-none focus:ring-4 focus:ring-[var(--color-ring)]"
-            >
-              <option value="candidate">Candidate</option>
-              <option value="recruiter">Recruiter</option>
-            </select>
+            {lockRole ? (
+              <>
+                <input name="role" type="hidden" value={initialRole} />
+                <div className="flex h-11 items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel)] px-4 text-sm text-[var(--color-ink)]">
+                  {initialRole === "recruiter" ? "Recruiter" : "Candidate"}
+                </div>
+              </>
+            ) : (
+              <select
+                id="role"
+                name="role"
+                defaultValue={initialRole}
+                className="flex h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 text-sm text-[var(--color-ink)] outline-none focus:ring-4 focus:ring-[var(--color-ring)]"
+              >
+                <option value="candidate">Candidate</option>
+                <option value="recruiter">Recruiter</option>
+              </select>
+            )}
           </div>
           {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
           <Button className="w-full" type="submit" disabled={isPending}>
-            {isPending ? "Creating account..." : "Create account"}
+            {isPending ? "Creating account..." : submitLabel}
           </Button>
           <p className="text-sm text-[var(--color-ink-muted)]">
             Already registered?{" "}

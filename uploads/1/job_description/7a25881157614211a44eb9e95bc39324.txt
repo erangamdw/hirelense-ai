@@ -1,0 +1,2 @@
+# Requirements
+Need FastAPI, retrieval engineering, stakeholder communication, and structured interviewing.

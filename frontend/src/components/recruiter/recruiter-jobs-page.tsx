@@ -47,13 +47,12 @@ function buildPayload(form: RecruiterJobFormState): RecruiterJobPayload {
 
 function JobCard({ job }: { job: RecruiterJobListItem }) {
   return (
-    <Link
-      href={`/recruiter/jobs/${job.id}`}
-      className="block rounded-[28px] border border-[var(--color-border)] bg-white px-5 py-5 transition-colors hover:bg-[var(--color-panel)]"
-    >
+    <div className="rounded-[28px] border border-[var(--color-border)] bg-white px-5 py-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold text-[var(--color-ink)]">{job.title}</p>
+          <Link href={`/recruiter/jobs/${job.id}`} className="text-lg font-semibold text-[var(--color-ink)] hover:text-[var(--color-accent)]">
+            {job.title}
+          </Link>
           <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{job.description}</p>
         </div>
         <Badge>{`${job.candidate_count} candidates`}</Badge>
@@ -63,8 +62,16 @@ function JobCard({ job }: { job: RecruiterJobListItem }) {
         {job.location ? <Badge>{job.location}</Badge> : null}
         <Badge>{`${job.linked_document_count} job docs`}</Badge>
       </div>
+      <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
+        <Link className="text-[var(--color-accent)]" href={`/recruiter/jobs/${job.id}`}>
+          Open job
+        </Link>
+        <Link className="text-[var(--color-accent)]" href={`/recruiter/jobs/${job.id}/edit`}>
+          Edit job
+        </Link>
+      </div>
       <p className="mt-4 text-sm text-[var(--color-ink-soft)]">{`Updated ${formatDateTime(job.updated_at)}`}</p>
-    </Link>
+    </div>
   );
 }
 
@@ -133,6 +140,15 @@ export function RecruiterJobsPage() {
 
   return (
     <div className="space-y-6">
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col gap-3 px-6 py-5 text-sm text-[var(--color-ink-muted)] md:flex-row md:items-center md:justify-between">
+          <p>Need the guided recruiter flow first? Use setup to create an account path, add your first job, and move into analysis.</p>
+          <Link className="font-semibold text-[var(--color-accent)]" href="/recruiter/setup">
+            Open recruiter setup
+          </Link>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Card>
           <CardHeader>
@@ -255,6 +271,12 @@ export function RecruiterJobsPage() {
                   href={`/recruiter/jobs/${createdJob.id}`}
                 >
                   Open job detail
+                </Link>
+                <Link
+                  className="mt-2 inline-flex text-sm font-semibold text-[var(--color-accent)]"
+                  href={`/recruiter/jobs/${createdJob.id}/edit`}
+                >
+                  Edit job
                 </Link>
               </div>
             ) : null}

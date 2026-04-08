@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -7,7 +9,11 @@ from app.models.report import SavedReport
 from app.models.recruiter import RecruiterCandidate, RecruiterJob
 from app.models.user import User
 from app.schemas.recruiter_dashboard import (
+    RecruiterCandidateComparisonItemResponse,
+    RecruiterCandidateComparisonResponse,
     RecruiterCandidateReviewResponse,
+    RecruiterComparisonConcernResponse,
+    RecruiterComparisonStrengthResponse,
     RecruiterDashboardRecentReportResponse,
     RecruiterDashboardSummaryResponse,
     RecruiterJobReviewCandidateResponse,
@@ -70,6 +76,7 @@ def build_recruiter_job_review(db: Session, *, recruiter: User, job_id: int) -> 
             full_name=candidate.full_name,
             current_title=candidate.current_title,
             notes=candidate.notes,
+            shortlist_status=candidate.shortlist_status,
             document_count=len(candidate.documents),
             report_count=len(candidate.saved_reports),
             latest_report_title=candidate.saved_reports[0].title if candidate.saved_reports else None,
@@ -120,6 +127,7 @@ def build_recruiter_candidate_review(
         email=candidate.email,
         current_title=candidate.current_title,
         notes=candidate.notes,
+        shortlist_status=candidate.shortlist_status,
         document_count=len(candidate.documents),
         document_types=document_types,
         report_count=len(candidate_reports),
@@ -127,6 +135,35 @@ def build_recruiter_candidate_review(
         latest_report_type=candidate_reports[0].report_type if candidate_reports else None,
         latest_report_created_at=candidate_reports[0].created_at if candidate_reports else None,
         report_history=[build_recent_report_item(report) for report in candidate_reports[:5]],
+    )
+
+
+def build_recruiter_candidate_comparison(
+    db: Session,
+    *,
+    recruiter: User,
+    job_id: int,
+) -> RecruiterCandidateComparisonResponse:
+    job = get_recruiter_job_with_reports(db, recruiter=recruiter, job_id=job_id)
+
+    candidates = [build_candidate_comparison_item(candidate) for candidate in job.candidates]
+    candidates.sort(
+        key=lambda item: (
+            shortlist_rank(item.shortlist_status),
+            0 if item.needs_fit_summary else 1,
+            item.report_count,
+            item.document_count,
+            item.full_name.lower(),
+        ),
+        reverse=True,
+    )
+
+    return RecruiterCandidateComparisonResponse(
+        job_id=job.id,
+        title=job.title,
+        description=job.description,
+        candidate_count=len(job.candidates),
+        candidates=candidates,
     )
 
 
@@ -184,3 +221,94 @@ def build_recent_report_item(report: SavedReport) -> RecruiterDashboardRecentRep
         recruiter_candidate_id=report.recruiter_candidate_id,
         created_at=report.created_at,
     )
+
+
+def build_candidate_comparison_item(candidate: RecruiterCandidate) -> RecruiterCandidateComparisonItemResponse:
+    candidate_reports = sorted(candidate.saved_reports, key=lambda item: (item.created_at, item.id), reverse=True)
+    latest_fit_summary = next(
+        (report for report in candidate_reports if report.report_type.value == "recruiter_fit_summary"),
+        None,
+    )
+
+    strengths: list[RecruiterComparisonStrengthResponse] = []
+    concerns: list[RecruiterComparisonConcernResponse] = []
+    missing_evidence_areas: list[str] = []
+    summary: str | None = None
+    recommendation: str | None = None
+
+    if latest_fit_summary is not None:
+        payload = latest_fit_summary.payload_json if isinstance(latest_fit_summary.payload_json, dict) else {}
+        summary = get_text_value(payload.get("summary"))
+        recommendation = get_text_value(payload.get("recommendation"))
+        missing_evidence_areas = get_string_list(payload.get("missing_evidence_areas"))
+        strengths = [
+            RecruiterComparisonStrengthResponse(
+                title=get_text_value(item.get("title")) or "Strength",
+                summary=get_text_value(item.get("summary")) or "",
+                evidence_chunk_ids=get_int_list(item.get("evidence_chunk_ids")),
+            )
+            for item in get_dict_list(payload.get("strengths"))
+        ]
+        concerns = [
+            RecruiterComparisonConcernResponse(
+                title=get_text_value(item.get("title")) or "Concern",
+                summary=get_text_value(item.get("summary")) or "",
+                evidence_chunk_ids=get_int_list(item.get("evidence_chunk_ids")),
+            )
+            for item in get_dict_list(payload.get("concerns"))
+        ]
+
+    return RecruiterCandidateComparisonItemResponse(
+        candidate_id=candidate.id,
+        full_name=candidate.full_name,
+        current_title=candidate.current_title,
+        notes=candidate.notes,
+        shortlist_status=candidate.shortlist_status,
+        document_count=len(candidate.documents),
+        report_count=len(candidate_reports),
+        latest_fit_summary_report_id=latest_fit_summary.id if latest_fit_summary else None,
+        latest_fit_summary_title=latest_fit_summary.title if latest_fit_summary else None,
+        latest_fit_summary_created_at=latest_fit_summary.created_at if latest_fit_summary else None,
+        fit_summary_summary=summary,
+        fit_summary_recommendation=recommendation,
+        strengths=strengths[:3],
+        concerns=concerns[:3],
+        missing_evidence_areas=missing_evidence_areas[:3],
+        needs_fit_summary=latest_fit_summary is None,
+    )
+
+
+def shortlist_rank(value: Any) -> int:
+    status = getattr(value, "value", value)
+    if status == "shortlisted":
+        return 3
+    if status == "under_review":
+        return 2
+    if status == "declined":
+        return 1
+    return 0
+
+
+def get_text_value(value: Any) -> str | None:
+    if isinstance(value, str):
+        normalized = " ".join(value.split()).strip()
+        return normalized or None
+    return None
+
+
+def get_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+
+
+def get_int_list(value: Any) -> list[int]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, int)]
+
+
+def get_dict_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]

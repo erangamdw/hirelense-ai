@@ -3,6 +3,7 @@ from app.models.candidate_profile import CandidateProfile
 from app.models.chunk import Chunk
 from app.models.document import Document, DocumentIndexingStatus, DocumentParsingStatus, DocumentType
 from app.models.recruiter import RecruiterCandidate, RecruiterJob
+from app.models.recruiter_profile import RecruiterProfile
 from app.models.report import ReportType, SavedReport
 from app.models.user import User, UserRole
 
@@ -15,6 +16,7 @@ __all__ = [
     "DocumentType",
     "RecruiterCandidate",
     "RecruiterJob",
+    "RecruiterProfile",
     "ReportType",
     "SavedReport",
     "User",

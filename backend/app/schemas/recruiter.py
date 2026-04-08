@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.recruiter import RecruiterCandidateStatus
+
 
 class RecruiterJobBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
@@ -14,6 +16,10 @@ class RecruiterJobBase(BaseModel):
 
 
 class RecruiterJobCreate(RecruiterJobBase):
+    pass
+
+
+class RecruiterJobUpdate(RecruiterJobBase):
     pass
 
 
@@ -34,9 +40,14 @@ class RecruiterCandidateResponse(BaseModel):
     email: str | None
     current_title: str | None
     notes: str | None
+    shortlist_status: RecruiterCandidateStatus
     document_count: int = 0
     created_at: datetime
     updated_at: datetime
+
+
+class RecruiterCandidateStatusUpdate(BaseModel):
+    shortlist_status: RecruiterCandidateStatus
 
 
 class RecruiterJobListItemResponse(BaseModel):

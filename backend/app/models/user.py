@@ -51,6 +51,12 @@ class User(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    recruiter_profile = relationship(
+        "RecruiterProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
     documents = relationship(
         "Document",
         back_populates="owner",

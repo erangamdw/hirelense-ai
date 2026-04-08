@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String, Text, func
+from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
+
+
+class RecruiterCandidateStatus(str, Enum):
+    UNDER_REVIEW = "under_review"
+    SHORTLISTED = "shortlisted"
+    DECLINED = "declined"
 
 
 class RecruiterJob(Base):
@@ -73,6 +80,16 @@ class RecruiterCandidate(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     current_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    shortlist_status: Mapped[RecruiterCandidateStatus] = mapped_column(
+        SqlEnum(
+            RecruiterCandidateStatus,
+            name="recruiter_candidate_status",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+            validate_strings=True,
+        ),
+        nullable=False,
+        default=RecruiterCandidateStatus.UNDER_REVIEW,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

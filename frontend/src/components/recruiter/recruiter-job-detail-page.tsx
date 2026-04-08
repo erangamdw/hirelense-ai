@@ -135,9 +135,17 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
           <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-ink-soft)]">Recruiter job detail</p>
           <h2 className="mt-2 text-2xl font-semibold text-[var(--color-ink)]">{data.detail.title}</h2>
         </div>
-        <Link className="text-sm font-semibold text-[var(--color-accent)]" href="/recruiter/jobs">
-          Back to jobs
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link className="text-sm font-semibold text-[var(--color-accent)]" href={`/recruiter/jobs/${jobId}/comparison`}>
+            Compare candidates
+          </Link>
+          <Link className="text-sm font-semibold text-[var(--color-accent)]" href={`/recruiter/jobs/${jobId}/edit`}>
+            Edit job
+          </Link>
+          <Link className="text-sm font-semibold text-[var(--color-accent)]" href="/recruiter/jobs">
+            Back to jobs
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_0.95fr]">
@@ -316,9 +324,17 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
         <Card>
           <CardHeader>
             <CardTitle>Candidate list</CardTitle>
-            <CardDescription>Each candidate card exposes live review counts and a route for uploads and review details.</CardDescription>
+            <CardDescription>Each candidate card exposes live review counts, shortlist status, and a route for uploads and review details.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {data.review.candidates.length ? (
+              <Link
+                href={`/recruiter/jobs/${jobId}/comparison`}
+                className="block rounded-[28px] border border-dashed border-[var(--color-border)] bg-[var(--color-panel)] px-5 py-4 text-sm font-semibold text-[var(--color-accent)]"
+              >
+                Open comparison workflow
+              </Link>
+            ) : null}
             {data.review.candidates.length ? (
               data.review.candidates.map((candidate) => (
                 <Link
@@ -334,6 +350,7 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      <Badge>{formatLabel(candidate.shortlist_status)}</Badge>
                       <Badge>{`${candidate.document_count} docs`}</Badge>
                       <Badge>{`${candidate.report_count} reports`}</Badge>
                     </div>

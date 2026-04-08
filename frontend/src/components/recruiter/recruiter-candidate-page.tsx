@@ -16,6 +16,7 @@ import {
   fetchRecruiterJobDetail,
   uploadRecruiterCandidateDocument,
 } from "@/lib/api/recruiter";
+import { RecruiterCandidateNav } from "@/components/recruiter/recruiter-candidate-nav";
 import type {
   RecruiterCandidateReview,
   RecruiterJobDetail,
@@ -109,15 +110,24 @@ export function RecruiterCandidatePage({
 
   return (
     <div className="space-y-6">
+      <RecruiterCandidateNav jobId={jobId} candidateId={candidateId} />
+
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-ink-soft)]">Recruiter candidate review</p>
           <h2 className="mt-2 text-2xl font-semibold text-[var(--color-ink)]">{data.review.full_name}</h2>
-          <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{data.job.title}</p>
+          <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
+            {data.job.title} · {formatLabel(data.review.shortlist_status)}
+          </p>
         </div>
-        <Link className="text-sm font-semibold text-[var(--color-accent)]" href={`/recruiter/jobs/${jobId}`}>
-          Back to job detail
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link className="text-sm font-semibold text-[var(--color-accent)]" href={`/recruiter/jobs/${jobId}/comparison`}>
+            Open comparison
+          </Link>
+          <Link className="text-sm font-semibold text-[var(--color-accent)]" href={`/recruiter/jobs/${jobId}`}>
+            Back to job detail
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_0.95fr]">
@@ -131,6 +141,7 @@ export function RecruiterCandidatePage({
             <p>{data.review.email || "No email saved."}</p>
             {data.review.notes ? <p>{data.review.notes}</p> : null}
             <div className="flex flex-wrap gap-2">
+              <Badge>{formatLabel(data.review.shortlist_status)}</Badge>
               <Badge>{`${data.review.document_count} documents`}</Badge>
               <Badge>{`${data.review.report_count} reports`}</Badge>
             </div>
@@ -217,14 +228,42 @@ export function RecruiterCandidatePage({
 
       <Card>
         <CardHeader>
+          <CardTitle>Recruiter analysis actions</CardTitle>
+          <CardDescription>Generate recruiter-facing analysis and interview screens from this candidate scope.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <Link
+            className="block rounded-2xl bg-white px-4 py-3 text-[var(--color-ink)] ring-1 ring-[var(--color-border)]"
+            href={`/recruiter/jobs/${jobId}/candidates/${candidateId}/analysis`}
+          >
+            Open fit summary analysis
+          </Link>
+          <Link
+            className="block rounded-2xl bg-white px-4 py-3 text-[var(--color-ink)] ring-1 ring-[var(--color-border)]"
+            href={`/recruiter/jobs/${jobId}/candidates/${candidateId}/interview-pack`}
+          >
+            Open interview pack
+          </Link>
+          <Link
+            className="block rounded-2xl bg-white px-4 py-3 text-[var(--color-ink)] ring-1 ring-[var(--color-border)]"
+            href={`/recruiter/reports?jobId=${jobId}&candidateId=${candidateId}`}
+          >
+            Open scoped recruiter reports
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Report history summary</CardTitle>
           <CardDescription>Saved recruiter reports already tied to this candidate scope.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.review.report_history.length ? (
             data.review.report_history.map((report) => (
-              <div
+              <Link
                 key={report.id}
+                href={`/recruiter/reports/${report.id}`}
                 className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -234,7 +273,7 @@ export function RecruiterCandidatePage({
                   </div>
                   <Badge>{formatLabel(report.report_type)}</Badge>
                 </div>
-              </div>
+              </Link>
             ))
           ) : (
             <p className="text-sm text-[var(--color-ink-muted)]">

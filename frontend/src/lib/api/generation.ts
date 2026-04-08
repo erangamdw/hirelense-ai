@@ -5,6 +5,9 @@ import type {
   CandidateInterviewQuestionsResult,
   CandidateSkillGapAnalysisResult,
   CandidateStarAnswerResult,
+  RecruiterFitSummaryResult,
+  RecruiterGenerationPayload,
+  RecruiterInterviewPackResult,
 } from "@/lib/api/types";
 
 function buildCandidateGenerationBody(payload: CandidateGenerationPayload) {
@@ -17,6 +20,14 @@ function buildCandidateGenerationBody(payload: CandidateGenerationPayload) {
     use_upgrade_model: payload.useUpgradeModel,
     temperature: payload.temperature,
     max_output_tokens: payload.maxOutputTokens,
+  };
+}
+
+function buildRecruiterGenerationBody(payload: RecruiterGenerationPayload) {
+  return {
+    ...buildCandidateGenerationBody(payload),
+    recruiter_job_id: payload.recruiterJobId,
+    recruiter_candidate_id: payload.recruiterCandidateId,
   };
 }
 
@@ -61,5 +72,27 @@ export function generateCandidateSkillGapAnalysis(
     method: "POST",
     accessToken,
     body: JSON.stringify(buildCandidateGenerationBody(payload)),
+  });
+}
+
+export function generateRecruiterFitSummary(
+  accessToken: string,
+  payload: RecruiterGenerationPayload,
+) {
+  return apiFetch<RecruiterFitSummaryResult>("/rag/recruiter/fit-summary", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(buildRecruiterGenerationBody(payload)),
+  });
+}
+
+export function generateRecruiterInterviewPack(
+  accessToken: string,
+  payload: RecruiterGenerationPayload,
+) {
+  return apiFetch<RecruiterInterviewPackResult>("/rag/recruiter/interview-pack", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(buildRecruiterGenerationBody(payload)),
   });
 }

@@ -7,6 +7,8 @@ export function createReport(
     reportType: ReportType;
     query: string;
     title?: string;
+    recruiterJobId?: number;
+    recruiterCandidateId?: number;
     payload: Record<string, unknown>;
   },
 ) {
@@ -17,6 +19,8 @@ export function createReport(
       report_type: payload.reportType,
       query: payload.query,
       title: payload.title,
+      recruiter_job_id: payload.recruiterJobId,
+      recruiter_candidate_id: payload.recruiterCandidateId,
       payload: payload.payload,
     }),
   });
@@ -27,6 +31,8 @@ export function fetchReportHistory(
   options?: {
     reportType?: ReportType | "all";
     limit?: number;
+    recruiterJobId?: number;
+    recruiterCandidateId?: number;
   },
 ) {
   const searchParams = new URLSearchParams();
@@ -35,6 +41,12 @@ export function fetchReportHistory(
   }
   if (options?.limit) {
     searchParams.set("limit", String(options.limit));
+  }
+  if (options?.recruiterJobId) {
+    searchParams.set("recruiter_job_id", String(options.recruiterJobId));
+  }
+  if (options?.recruiterCandidateId) {
+    searchParams.set("recruiter_candidate_id", String(options.recruiterCandidateId));
   }
 
   const suffix = searchParams.size ? `?${searchParams.toString()}` : "";

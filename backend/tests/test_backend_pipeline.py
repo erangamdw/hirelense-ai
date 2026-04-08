@@ -488,6 +488,19 @@ def test_grounded_generation_endpoints_return_answer_and_evidence(tmp_path: Path
         assert "Answer outline:" in candidate_generation_json["answer"]
         assert all(item["owner_role"] == "candidate" for item in candidate_generation_json["evidence"])
 
+        candidate_questions_generation = client.post(
+            "/rag/candidate/interview-questions",
+            headers=candidate_headers,
+            json={
+                "query": "Generate likely interview questions for this target role and explain which parts of my background they are probing.",
+                "document_types": ["cv", "job_description", "project_notes"],
+            },
+        )
+        assert candidate_questions_generation.status_code == 200
+        candidate_questions_generation_json = candidate_questions_generation.json()
+        assert candidate_questions_generation_json["evidence_count"] >= 1
+        assert len(candidate_questions_generation_json["questions"]) >= 3
+
         recruiter_generation = client.post(
             "/rag/recruiter/generate",
             headers=recruiter_headers,
@@ -974,6 +987,241 @@ def test_recruiter_job_and_candidate_intake_endpoints_link_documents(tmp_path: P
             assert candidate_document.recruiter_candidate_id == candidate_one_id
             assert candidate_document.parsing_status == DocumentParsingStatus.SUCCEEDED
             assert candidate_document.indexing_status == DocumentIndexingStatus.SUCCEEDED
+
+
+def test_recruiter_profile_endpoints_persist_profile_data(tmp_path: Path, monkeypatch) -> None:
+    with build_test_client(tmp_path, monkeypatch) as (client, _session_factory):
+        recruiter_token = register_and_login(client, email="recruiter-profile@example.com", role="recruiter")
+        candidate_token = register_and_login(client, email="candidate-profile-block@example.com", role="candidate")
+        recruiter_headers = {"Authorization": f"Bearer {recruiter_token}"}
+        candidate_headers = {"Authorization": f"Bearer {candidate_token}"}
+
+        missing_profile = client.get("/recruiter/profile", headers=recruiter_headers)
+        assert missing_profile.status_code == 404
+
+        create_profile = client.post(
+            "/recruiter/profile",
+            headers=recruiter_headers,
+            json={
+                "company_name": "  Acme Hiring  ",
+                "recruiter_type": "agency",
+                "organisation_size": " 50-200 employees ",
+            },
+        )
+        assert create_profile.status_code == 201
+        create_profile_json = create_profile.json()
+        assert create_profile_json["company_name"] == "Acme Hiring"
+        assert create_profile_json["recruiter_type"] == "agency"
+        assert create_profile_json["organisation_size"] == "50-200 employees"
+
+        duplicate_create = client.post(
+            "/recruiter/profile",
+            headers=recruiter_headers,
+            json={
+                "company_name": "Another company",
+                "recruiter_type": "in_house",
+            },
+        )
+        assert duplicate_create.status_code == 409
+
+        get_profile = client.get("/recruiter/profile", headers=recruiter_headers)
+        assert get_profile.status_code == 200
+        assert get_profile.json()["company_name"] == "Acme Hiring"
+
+        update_profile = client.put(
+            "/recruiter/profile",
+            headers=recruiter_headers,
+            json={
+                "company_name": "Acme Talent",
+                "recruiter_type": "hiring_manager",
+                "organisation_size": "",
+            },
+        )
+        assert update_profile.status_code == 200
+        update_profile_json = update_profile.json()
+        assert update_profile_json["company_name"] == "Acme Talent"
+        assert update_profile_json["recruiter_type"] == "hiring_manager"
+        assert update_profile_json["organisation_size"] is None
+
+        invalid_company = client.put(
+            "/recruiter/profile",
+            headers=recruiter_headers,
+            json={
+                "company_name": " ",
+                "recruiter_type": "agency",
+            },
+        )
+        assert invalid_company.status_code == 422
+
+        candidate_blocked = client.get("/recruiter/profile", headers=candidate_headers)
+        assert candidate_blocked.status_code == 403
+
+
+def test_recruiter_candidate_comparison_endpoint_and_status_updates(tmp_path: Path, monkeypatch) -> None:
+    with build_test_client(tmp_path, monkeypatch) as (client, _session_factory):
+        recruiter_token = register_and_login(client, email="recruiter-compare@example.com", role="recruiter")
+        recruiter_headers = {"Authorization": f"Bearer {recruiter_token}"}
+
+        job_response = client.post(
+            "/recruiter/jobs",
+            headers=recruiter_headers,
+            json={
+                "title": "Platform Retrieval Engineer",
+                "description": "Own retrieval APIs and interview signal quality.",
+                "skills_required": ["FastAPI", "Chroma"],
+            },
+        )
+        assert job_response.status_code == 201
+        job_id = job_response.json()["id"]
+
+        candidate_one = client.post(
+            f"/recruiter/jobs/{job_id}/candidates",
+            headers=recruiter_headers,
+            json={
+                "full_name": "Jordan Strong",
+                "current_title": "Senior Backend Engineer",
+                "notes": "Looks promising for retrieval-heavy work.",
+            },
+        )
+        assert candidate_one.status_code == 201
+        candidate_one_id = candidate_one.json()["id"]
+
+        candidate_two = client.post(
+            f"/recruiter/jobs/{job_id}/candidates",
+            headers=recruiter_headers,
+            json={
+                "full_name": "Alex Needs Review",
+                "current_title": "Backend Engineer",
+            },
+        )
+        assert candidate_two.status_code == 201
+        candidate_two_id = candidate_two.json()["id"]
+
+        save_fit_summary = client.post(
+            "/reports",
+            headers=recruiter_headers,
+            json={
+                "report_type": "recruiter_fit_summary",
+                "query": "Summarize Jordan Strong for the retrieval role.",
+                "recruiter_candidate_id": candidate_one_id,
+                "payload": {
+                    "summary": "Jordan shows strong retrieval-system ownership and solid evidence-backed hiring workflow experience.",
+                    "recommendation": "Move this candidate to shortlist and probe scale details in the interview.",
+                    "missing_evidence_areas": ["Very large-scale production traffic"],
+                    "strengths": [
+                        {
+                            "title": "Retrieval ownership",
+                            "summary": "Built and maintained retrieval APIs and grounding flows.",
+                            "evidence_chunk_ids": [11, 12],
+                        }
+                    ],
+                    "concerns": [
+                        {
+                            "title": "Scale depth",
+                            "summary": "Need clearer proof of production scale under heavy traffic.",
+                            "evidence_chunk_ids": [13],
+                        }
+                    ],
+                },
+            },
+        )
+        assert save_fit_summary.status_code == 201
+        fit_summary_report_id = save_fit_summary.json()["id"]
+
+        comparison_response = client.get(f"/recruiter/jobs/{job_id}/comparison", headers=recruiter_headers)
+        assert comparison_response.status_code == 200
+        comparison_json = comparison_response.json()
+        assert comparison_json["job_id"] == job_id
+        assert comparison_json["candidate_count"] == 2
+        assert comparison_json["candidates"][0]["candidate_id"] == candidate_one_id
+        assert comparison_json["candidates"][0]["latest_fit_summary_report_id"] == fit_summary_report_id
+        assert comparison_json["candidates"][0]["fit_summary_summary"]
+        assert comparison_json["candidates"][0]["strengths"]
+        assert comparison_json["candidates"][0]["concerns"]
+        assert comparison_json["candidates"][0]["needs_fit_summary"] is False
+        assert comparison_json["candidates"][1]["candidate_id"] == candidate_two_id
+        assert comparison_json["candidates"][1]["needs_fit_summary"] is True
+        assert comparison_json["candidates"][1]["shortlist_status"] == "under_review"
+
+        status_update_response = client.patch(
+            f"/recruiter/jobs/{job_id}/candidates/{candidate_one_id}/status",
+            headers=recruiter_headers,
+            json={"shortlist_status": "shortlisted"},
+        )
+        assert status_update_response.status_code == 200
+        assert status_update_response.json()["shortlist_status"] == "shortlisted"
+
+        comparison_after_status_update = client.get(f"/recruiter/jobs/{job_id}/comparison", headers=recruiter_headers)
+        assert comparison_after_status_update.status_code == 200
+        comparison_after_status_update_json = comparison_after_status_update.json()
+        updated_candidate = next(
+            item
+            for item in comparison_after_status_update_json["candidates"]
+            if item["candidate_id"] == candidate_one_id
+        )
+        assert updated_candidate["shortlist_status"] == "shortlisted"
+
+
+def test_recruiter_job_update_endpoint_persists_changes(tmp_path: Path, monkeypatch) -> None:
+    with build_test_client(tmp_path, monkeypatch) as (client, _session_factory):
+        recruiter_token = register_and_login(client, email="recruiter-edit@example.com", role="recruiter")
+        other_recruiter_token = register_and_login(
+            client,
+            email="other-recruiter-edit@example.com",
+            role="recruiter",
+        )
+        recruiter_headers = {"Authorization": f"Bearer {recruiter_token}"}
+        other_recruiter_headers = {"Authorization": f"Bearer {other_recruiter_token}"}
+
+        create_job_response = client.post(
+            "/recruiter/jobs",
+            headers=recruiter_headers,
+            json={
+                "title": "Backend Engineer",
+                "description": "Own APIs and platform tooling.",
+                "seniority": "mid",
+                "location": "Remote",
+                "skills_required": ["FastAPI", "SQLAlchemy"],
+            },
+        )
+        assert create_job_response.status_code == 201
+        job_id = create_job_response.json()["id"]
+
+        update_job_response = client.put(
+            f"/recruiter/jobs/{job_id}",
+            headers=recruiter_headers,
+            json={
+                "title": "Senior Backend Engineer",
+                "description": "Own APIs, retrieval quality, and platform reliability.",
+                "seniority": "senior",
+                "location": "London or Remote",
+                "skills_required": ["FastAPI", "SQLAlchemy", "Chroma"],
+            },
+        )
+        assert update_job_response.status_code == 200
+        update_job_json = update_job_response.json()
+        assert update_job_json["title"] == "Senior Backend Engineer"
+        assert update_job_json["description"] == "Own APIs, retrieval quality, and platform reliability."
+        assert update_job_json["seniority"] == "senior"
+        assert update_job_json["location"] == "London or Remote"
+        assert update_job_json["skills_required"] == ["FastAPI", "SQLAlchemy", "Chroma"]
+
+        job_detail_response = client.get(f"/recruiter/jobs/{job_id}", headers=recruiter_headers)
+        assert job_detail_response.status_code == 200
+        job_detail_json = job_detail_response.json()
+        assert job_detail_json["title"] == "Senior Backend Engineer"
+        assert job_detail_json["skills_required"] == ["FastAPI", "SQLAlchemy", "Chroma"]
+
+        other_recruiter_update_response = client.put(
+            f"/recruiter/jobs/{job_id}",
+            headers=other_recruiter_headers,
+            json={
+                "title": "Should Fail",
+                "description": "Should not update another recruiter's job.",
+                "skills_required": [],
+            },
+        )
+        assert other_recruiter_update_response.status_code == 404
 
 
 def test_recruiter_scoped_retrieval_and_report_history_filters(tmp_path: Path, monkeypatch) -> None:

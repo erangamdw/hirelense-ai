@@ -4,6 +4,7 @@ from app.services.recruiter.generation import (
     generate_recruiter_interview_pack,
 )
 from app.services.recruiter.dashboard import (
+    build_recruiter_candidate_comparison,
     build_recruiter_candidate_review,
     build_recruiter_dashboard_summary,
     build_recruiter_job_review,
@@ -15,14 +16,23 @@ from app.services.recruiter.management import (
     RecruiterJobNotFoundError,
     RecruiterManagementError,
     build_recruiter_candidate_response,
+    update_recruiter_candidate_status,
     build_recruiter_job_list_item,
     create_recruiter_candidate,
     create_recruiter_job,
     get_recruiter_candidate,
     get_recruiter_job,
     list_recruiter_jobs,
+    update_recruiter_job,
     validate_candidate_upload_type,
     validate_job_upload_type,
+)
+from app.services.recruiter.profile import (
+    RecruiterProfileExistsError,
+    RecruiterProfileNotFoundError,
+    create_recruiter_profile,
+    get_recruiter_profile,
+    update_recruiter_profile,
 )
 
 __all__ = [
@@ -32,6 +42,9 @@ __all__ = [
     "RecruiterCandidateNotFoundError",
     "RecruiterJobNotFoundError",
     "RecruiterManagementError",
+    "RecruiterProfileExistsError",
+    "RecruiterProfileNotFoundError",
+    "build_recruiter_candidate_comparison",
     "build_recruiter_candidate_review",
     "build_recruiter_dashboard_summary",
     "build_recruiter_candidate_response",
@@ -39,11 +52,16 @@ __all__ = [
     "build_recruiter_job_review",
     "create_recruiter_candidate",
     "create_recruiter_job",
+    "create_recruiter_profile",
     "generate_recruiter_fit_summary",
     "generate_recruiter_interview_pack",
     "get_recruiter_candidate",
     "get_recruiter_job",
+    "get_recruiter_profile",
     "list_recruiter_jobs",
+    "update_recruiter_candidate_status",
+    "update_recruiter_profile",
+    "update_recruiter_job",
     "validate_candidate_upload_type",
     "validate_job_upload_type",
 ]

@@ -11,8 +11,12 @@ import { EvidencePanel } from "@/components/shared/evidence-panel";
 import { LoadingGrid } from "@/components/shared/loading-grid";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchRecruiterDashboard } from "@/lib/api/recruiter";
-import type { RecruiterDashboardSummary } from "@/lib/api/types";
+import {
+  fetchRecruiterDashboard,
+  fetchRecruiterJobDetail,
+  fetchRecruiterJobs,
+} from "@/lib/api/recruiter";
+import type { RecruiterDashboardSummary, RecruiterJobDetail } from "@/lib/api/types";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -25,6 +29,15 @@ export function RecruiterDashboard() {
   const { accessToken, status, user } = useAuth();
   const isRecruiterSession = status === "authenticated" && !!accessToken && user?.role === "recruiter";
   const [summary, setSummary] = useState<RecruiterDashboardSummary | null>(null);
+  const [analysisTargets, setAnalysisTargets] = useState<
+    Array<{
+      jobId: number;
+      candidateId: number;
+      candidateName: string;
+      jobTitle: string;
+      currentTitle: string | null;
+    }>
+  >([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,9 +46,25 @@ export function RecruiterDashboard() {
       return;
     }
 
-    fetchRecruiterDashboard(accessToken)
-      .then((payload) => {
+    Promise.all([fetchRecruiterDashboard(accessToken), fetchRecruiterJobs(accessToken)])
+      .then(async ([payload, jobs]) => {
+        const detailJobs: RecruiterJobDetail[] = await Promise.all(
+          jobs.items.slice(0, 3).map((job) => fetchRecruiterJobDetail(accessToken, job.id)),
+        );
+        const nextTargets = detailJobs
+          .flatMap((job) =>
+            job.candidates.slice(0, 2).map((candidate) => ({
+              jobId: job.id,
+              candidateId: candidate.id,
+              candidateName: candidate.full_name,
+              jobTitle: job.title,
+              currentTitle: candidate.current_title,
+            })),
+          )
+          .slice(0, 4);
+
         setSummary(payload);
+        setAnalysisTargets(nextTargets);
         setError(null);
       })
       .catch((caughtError) => {
@@ -99,8 +128,9 @@ export function RecruiterDashboard() {
           <CardContent className="space-y-3">
             {summary.recent_reports.length ? (
               summary.recent_reports.map((report) => (
-                <div
+                <Link
                   key={report.id}
+                  href={`/recruiter/reports/${report.id}`}
                   className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4"
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -110,7 +140,7 @@ export function RecruiterDashboard() {
                     </div>
                     <Badge>{report.report_type}</Badge>
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
               <p className="text-sm text-[var(--color-ink-muted)]">
@@ -137,14 +167,24 @@ export function RecruiterDashboard() {
       <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr]">
         <Card id="review">
           <CardHeader>
-            <CardTitle>Recent candidate names</CardTitle>
+            <CardTitle>Candidate analyses</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {summary.recent_candidate_names.length ? (
-              summary.recent_candidate_names.map((name) => <Badge key={name}>{name}</Badge>)
+          <CardContent className="space-y-3">
+            {analysisTargets.length ? (
+              analysisTargets.map((target) => (
+                <Link
+                  key={`${target.jobId}-${target.candidateId}`}
+                  href={`/recruiter/jobs/${target.jobId}/candidates/${target.candidateId}/analysis`}
+                  className="block rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4"
+                >
+                  <p className="font-medium text-[var(--color-ink)]">{target.candidateName}</p>
+                  <p className="mt-1 text-sm text-[var(--color-ink-muted)]">{target.currentTitle || "No current title"}</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.2em] text-[var(--color-ink-soft)]">{target.jobTitle}</p>
+                </Link>
+              ))
             ) : (
               <p className="text-sm text-[var(--color-ink-muted)]">
-                Candidate names will appear here as recruiter intake continues.
+                Candidate analysis links will appear here as recruiter intake grows.
               </p>
             )}
           </CardContent>
@@ -155,11 +195,17 @@ export function RecruiterDashboard() {
             <CardTitle>Recruiter workspace actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
+            <Link className="block rounded-2xl bg-white px-4 py-3 text-[var(--color-ink)] ring-1 ring-[var(--color-border)]" href="/recruiter/setup">
+              Open recruiter setup
+            </Link>
             <Link className="block rounded-2xl bg-white px-4 py-3 text-[var(--color-ink)] ring-1 ring-[var(--color-border)]" href="/recruiter/jobs">
               Open recruiter jobs
             </Link>
+            <Link className="block rounded-2xl bg-white px-4 py-3 text-[var(--color-ink)] ring-1 ring-[var(--color-border)]" href="/recruiter/reports">
+              Open recruiter reports
+            </Link>
             <p className="text-[var(--color-ink-muted)]">
-              Jobs, candidate intake, and recruiter-scoped upload pages now sit on the existing backend contracts.
+              Setup, jobs, candidate analyses, recruiter-scoped uploads, and report detail views now sit on the existing backend contracts.
             </p>
           </CardContent>
         </Card>

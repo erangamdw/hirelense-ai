@@ -27,7 +27,9 @@ const candidateNav: NavItem[] = [
 
 const recruiterNav: NavItem[] = [
   { href: "/recruiter", label: "Overview", icon: BriefcaseBusiness, match: "exact" },
+  { href: "/recruiter/setup", label: "Setup", icon: Sparkles, match: "prefix" },
   { href: "/recruiter/jobs", label: "Jobs", icon: UserRoundSearch, match: "prefix" },
+  { href: "/recruiter/reports", label: "Reports", icon: FileSearch, match: "prefix" },
 ];
 
 function getNav(role: UserRole) {
@@ -75,15 +77,17 @@ export function AppShell({
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-[var(--color-ink)] text-[var(--color-paper)]"
+                      ? "bg-[var(--color-ink)] !text-white shadow-[0_18px_48px_-32px_rgba(21,21,21,0.95)]"
                       : "text-[var(--color-ink-muted)] hover:bg-[var(--color-panel-strong)] hover:text-[var(--color-ink)]",
                   )}
+                  style={isActive ? { color: "#ffffff" } : undefined}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
+                  <Icon className={cn("h-4 w-4", isActive ? "text-white" : undefined)} />
+                  <span style={isActive ? { color: "#ffffff" } : undefined}>{item.label}</span>
                 </Link>
               );
             })}

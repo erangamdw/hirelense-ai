@@ -16,7 +16,9 @@ function SkillGapResult({ result }: { result: CandidateSkillGapAnalysisResult })
           <CardDescription>Backend summary of where your evidence aligns and where it is thin.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{result.analysis_summary}</p>
+          <p className="whitespace-pre-wrap break-words text-sm leading-7 text-[var(--color-ink-muted)]">
+            {result.analysis_summary}
+          </p>
         </CardContent>
       </Card>
 
@@ -29,7 +31,9 @@ function SkillGapResult({ result }: { result: CandidateSkillGapAnalysisResult })
             {result.strengths.map((item) => (
               <div key={item.title} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
                 <p className="font-medium text-[var(--color-ink)]">{item.title}</p>
-                <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{item.summary}</p>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-[var(--color-ink-muted)]">
+                  {item.summary}
+                </p>
                 <div className="mt-3">
                   <CitationLinks chunkIds={item.evidence_chunk_ids} />
                 </div>
@@ -49,8 +53,12 @@ function SkillGapResult({ result }: { result: CandidateSkillGapAnalysisResult })
                   <p className="font-medium text-[var(--color-ink)]">{formatLabel(item.skill_area)}</p>
                   <Badge>{formatLabel(item.severity)}</Badge>
                 </div>
-                <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{item.summary}</p>
-                <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{item.recommendation}</p>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-[var(--color-ink-muted)]">
+                  {item.summary}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-[var(--color-ink-muted)]">
+                  {item.recommendation}
+                </p>
                 <div className="mt-3">
                   <CitationLinks chunkIds={item.evidence_chunk_ids} />
                 </div>
@@ -68,7 +76,7 @@ function SkillGapResult({ result }: { result: CandidateSkillGapAnalysisResult })
         <CardContent className="space-y-3">
           {result.improvement_actions.map((item) => (
             <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-              <p className="text-sm text-[var(--color-ink-muted)]">{item}</p>
+              <p className="whitespace-pre-wrap break-words text-sm text-[var(--color-ink-muted)]">{item}</p>
             </div>
           ))}
         </CardContent>

@@ -15,7 +15,7 @@ export type ReportType =
   | "recruiter_interview_pack";
 
 export type ApiErrorPayload = {
-  detail?: string;
+  detail?: unknown;
 };
 
 export type CurrentUser = {
@@ -236,6 +236,26 @@ export type RecruiterDashboardSummary = {
   recent_candidate_names: string[];
 };
 
+export type RecruiterType = "in_house" | "agency" | "hiring_manager";
+
+export type RecruiterProfilePayload = {
+  company_name: string;
+  recruiter_type: RecruiterType;
+  organisation_size?: string | null;
+};
+
+export type RecruiterProfile = RecruiterProfilePayload & {
+  id: number;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecruiterGenerationPayload = CandidateGenerationPayload & {
+  recruiterJobId: number;
+  recruiterCandidateId: number;
+};
+
 export type RecruiterJobPayload = {
   title: string;
   description: string;
@@ -259,10 +279,13 @@ export type RecruiterCandidate = {
   email: string | null;
   current_title: string | null;
   notes: string | null;
+  shortlist_status: RecruiterCandidateShortlistStatus;
   document_count: number;
   created_at: string;
   updated_at: string;
 };
+
+export type RecruiterCandidateShortlistStatus = "under_review" | "shortlisted" | "declined";
 
 export type RecruiterJobListItem = {
   id: number;
@@ -292,6 +315,7 @@ export type RecruiterJobReviewCandidate = {
   full_name: string;
   current_title: string | null;
   notes: string | null;
+  shortlist_status: RecruiterCandidateShortlistStatus;
   document_count: number;
   report_count: number;
   latest_report_title: string | null;
@@ -322,6 +346,7 @@ export type RecruiterCandidateReview = {
   email: string | null;
   current_title: string | null;
   notes: string | null;
+  shortlist_status: RecruiterCandidateShortlistStatus;
   document_count: number;
   document_types: string[];
   report_count: number;
@@ -329,4 +354,83 @@ export type RecruiterCandidateReview = {
   latest_report_type: ReportType | null;
   latest_report_created_at: string | null;
   report_history: RecruiterRecentReport[];
+};
+
+export type RecruiterComparisonSignal = {
+  title: string;
+  summary: string;
+  evidence_chunk_ids: number[];
+};
+
+export type RecruiterCandidateComparisonItem = {
+  candidate_id: number;
+  full_name: string;
+  current_title: string | null;
+  notes: string | null;
+  shortlist_status: RecruiterCandidateShortlistStatus;
+  document_count: number;
+  report_count: number;
+  latest_fit_summary_report_id: number | null;
+  latest_fit_summary_title: string | null;
+  latest_fit_summary_created_at: string | null;
+  fit_summary_summary: string | null;
+  fit_summary_recommendation: string | null;
+  strengths: RecruiterComparisonSignal[];
+  concerns: RecruiterComparisonSignal[];
+  missing_evidence_areas: string[];
+  needs_fit_summary: boolean;
+};
+
+export type RecruiterCandidateComparison = {
+  job_id: number;
+  title: string;
+  description: string;
+  candidate_count: number;
+  candidates: RecruiterCandidateComparisonItem[];
+};
+
+export type RecruiterGeneratedReportBase = {
+  query: string;
+  recruiter_job_id: number | null;
+  recruiter_candidate_id: number | null;
+  provider: string;
+  model: string;
+  temperature: number;
+  max_output_tokens: number;
+  applied_document_types: DocumentType[];
+  evidence_count: number;
+  evidence: EvidenceChunk[];
+};
+
+export type RecruiterStrengthSignal = {
+  title: string;
+  summary: string;
+  evidence_chunk_ids: number[];
+};
+
+export type RecruiterConcern = {
+  title: string;
+  summary: string;
+  evidence_chunk_ids: number[];
+};
+
+export type RecruiterFitSummaryResult = RecruiterGeneratedReportBase & {
+  summary: string;
+  strengths: RecruiterStrengthSignal[];
+  concerns: RecruiterConcern[];
+  missing_evidence_areas: string[];
+  recommendation: string;
+};
+
+export type RecruiterInterviewProbe = {
+  category: string;
+  prompt: string;
+  rationale: string;
+  evidence_chunk_ids: number[];
+};
+
+export type RecruiterInterviewPackResult = RecruiterGeneratedReportBase & {
+  overview: string;
+  probes: RecruiterInterviewProbe[];
+  follow_up_questions: string[];
 };

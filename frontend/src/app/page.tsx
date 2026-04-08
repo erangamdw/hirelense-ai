@@ -19,10 +19,11 @@ export default function Home() {
         <div className="mt-10 flex flex-wrap gap-4">
           <Link
             href="/login"
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--color-ink)] px-6 text-sm font-semibold text-[var(--color-paper)] transition-colors hover:bg-[var(--color-accent)]"
+            className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--color-ink)] px-6 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-accent)] hover:text-white"
+            style={{ color: "#ffffff" }}
           >
-            Open auth flow
-            <ArrowRight className="h-4 w-4" />
+            <span style={{ color: "#ffffff" }}>Open auth flow</span>
+            <ArrowRight className="h-4 w-4 text-white" />
           </Link>
           <Link
             href="/register"

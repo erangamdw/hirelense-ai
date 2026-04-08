@@ -66,40 +66,39 @@ def upgrade() -> None:
         unique=False,
     )
 
-    op.add_column("documents", sa.Column("recruiter_job_id", sa.Integer(), nullable=True))
-    op.add_column("documents", sa.Column("recruiter_candidate_id", sa.Integer(), nullable=True))
-    op.create_index(op.f("ix_documents_recruiter_job_id"), "documents", ["recruiter_job_id"], unique=False)
-    op.create_index(
-        op.f("ix_documents_recruiter_candidate_id"),
-        "documents",
-        ["recruiter_candidate_id"],
-        unique=False,
-    )
-    op.create_foreign_key(
-        "fk_documents_recruiter_job_id",
-        "documents",
-        "recruiter_jobs",
-        ["recruiter_job_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
-    op.create_foreign_key(
-        "fk_documents_recruiter_candidate_id",
-        "documents",
-        "recruiter_candidates",
-        ["recruiter_candidate_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
+    with op.batch_alter_table("documents", schema=None) as batch_op:
+        batch_op.add_column(sa.Column("recruiter_job_id", sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column("recruiter_candidate_id", sa.Integer(), nullable=True))
+        batch_op.create_index(op.f("ix_documents_recruiter_job_id"), ["recruiter_job_id"], unique=False)
+        batch_op.create_index(
+            op.f("ix_documents_recruiter_candidate_id"),
+            ["recruiter_candidate_id"],
+            unique=False,
+        )
+        batch_op.create_foreign_key(
+            "fk_documents_recruiter_job_id",
+            "recruiter_jobs",
+            ["recruiter_job_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
+        batch_op.create_foreign_key(
+            "fk_documents_recruiter_candidate_id",
+            "recruiter_candidates",
+            ["recruiter_candidate_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint("fk_documents_recruiter_candidate_id", "documents", type_="foreignkey")
-    op.drop_constraint("fk_documents_recruiter_job_id", "documents", type_="foreignkey")
-    op.drop_index(op.f("ix_documents_recruiter_candidate_id"), table_name="documents")
-    op.drop_index(op.f("ix_documents_recruiter_job_id"), table_name="documents")
-    op.drop_column("documents", "recruiter_candidate_id")
-    op.drop_column("documents", "recruiter_job_id")
+    with op.batch_alter_table("documents", schema=None) as batch_op:
+        batch_op.drop_constraint("fk_documents_recruiter_candidate_id", type_="foreignkey")
+        batch_op.drop_constraint("fk_documents_recruiter_job_id", type_="foreignkey")
+        batch_op.drop_index(op.f("ix_documents_recruiter_candidate_id"))
+        batch_op.drop_index(op.f("ix_documents_recruiter_job_id"))
+        batch_op.drop_column("recruiter_candidate_id")
+        batch_op.drop_column("recruiter_job_id")
 
     op.drop_index(op.f("ix_recruiter_candidates_recruiter_user_id"), table_name="recruiter_candidates")
     op.drop_index(op.f("ix_recruiter_candidates_job_id"), table_name="recruiter_candidates")

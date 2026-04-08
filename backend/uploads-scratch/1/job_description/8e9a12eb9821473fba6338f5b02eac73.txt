@@ -1,0 +1,62 @@
+Backend Engineer 
+
+
+About Zuma Labs 
+
+
+Zuma Labs is a disruptive technology startup building force multipliers for systemic industries. Our first two products, Venetian and Squawk, target the over-the-counter (OTC) trading markets. We work closely with our customers and count a large publicly traded brokerage among our partners. 
+
+Trading technology is an old industry… and we’re here to change that. At Zuma Labs, we value creativity, entrepreneurship, and a genuine passion for problem-solving -but what we’re really looking for are born-and-bred hackers with a healthy disrespect for the status quo. 
+
+
+
+Role Overview 
+
+
+You will work directly with the founder, experienced brokers, and traders, providing input that immediately impacts the business. You’ll be given broad tasks that support the company’s vision, with incredible autonomy over how to achieve them. 
+
+Your work will apply the latest analytical techniques to real-world problems, prioritising working solutions over perfect answers. We want self-starters who are confident but humble, willing to ask questions, seek advice, and iterate fast. 
+
+
+
+What You’ll Do 
+
+
+Build and maintain backend services and APIs powering Zuma’s platforms using Python, Django, Torch, and SGLang. 
+Collaborate with frontend engineers, product teams, and traders to deliver features that directly impact real-world users. 
+Design and implement scalable, reliable, and performant backend systems. 
+Develop and maintain microservices, containerized applications, and supporting infrastructure. 
+Solve complex problems with practical solutions and data-driven approaches. 
+Contribute to architecture discussions, code reviews, and testing strategies. 
+Identify performance or reliability bottlenecks and propose improvements. 
+
+
+Required Qualifications & Experience 
+
+
+Strong experience with Python and Django. 
+Familiarity with Torch (PyTorch) for analytical or ML workloads. 
+Proficiency in SGLang or willingness to learn domain-specific languages. 
+A keen sense of system design and desire to build elegant, maintainable solutions. 
+General understanding of supporting infrastructure: git, microservices, containers, etc. 
+Comfortable working with numbers and data, with or without prior trading/finance experience. 
+Experience with writing unit and integration tests and maintaining CI/CD pipelines. 
+
+
+Preferred Qualifications & Experience 
+
+
+Experience with GraphQL or REST API development. 
+Knowledge of asynchronous programming, message queues, or real-time streaming architectures. 
+Familiarity with cloud platforms (AWS, GCP, Azure) and container orchestration (Kubernetes/Docker). 
+Exposure to data pipelines, analytics workflows, or ML deployment. 
+Experience working in startup or product-led teams. 
+
+
+Why Zuma Labs? 
+
+
+Work in a high-impact startup environment where your work immediately affects the business. 
+Collaborate directly with founders, traders, and product experts. 
+Apply your backend engineering skills to real-world problems that go beyond theoretical exercises. 
+Grow as a developer and problem solver in a culture that encourages creativity, ownership, and experimentation.

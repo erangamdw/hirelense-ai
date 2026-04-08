@@ -16,7 +16,9 @@ function QuestionsResult({ result }: { result: CandidateInterviewQuestionsResult
           <CardDescription>The backend summary for the likely-question set.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{result.overview}</p>
+          <p className="whitespace-pre-wrap break-words text-sm leading-7 text-[var(--color-ink-muted)]">
+            {result.overview}
+          </p>
         </CardContent>
       </Card>
 
@@ -28,8 +30,8 @@ function QuestionsResult({ result }: { result: CandidateInterviewQuestionsResult
                 <Badge>{`Q${index + 1}`}</Badge>
                 <Badge>{formatLabel(item.category)}</Badge>
               </div>
-              <CardTitle className="text-xl">{item.question}</CardTitle>
-              <CardDescription>{item.rationale}</CardDescription>
+              <CardTitle className="break-words text-xl leading-8">{item.question}</CardTitle>
+              <CardDescription className="whitespace-pre-wrap break-words">{item.rationale}</CardDescription>
             </CardHeader>
             <CardContent>
               <CitationLinks chunkIds={item.evidence_chunk_ids} />

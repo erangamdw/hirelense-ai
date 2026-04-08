@@ -1,0 +1,2 @@
+# Requirements
+Need FastAPI ownership, retrieval architecture, and evidence-backed interviewing.

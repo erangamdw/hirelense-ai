@@ -1,0 +1,2 @@
+# Requirements
+Need Next.js, TypeScript, and design systems.

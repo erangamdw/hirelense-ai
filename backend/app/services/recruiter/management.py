@@ -4,9 +4,14 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.document import DocumentType
-from app.models.recruiter import RecruiterCandidate, RecruiterJob
+from app.models.recruiter import RecruiterCandidate, RecruiterCandidateStatus, RecruiterJob
 from app.models.user import User
-from app.schemas.recruiter import RecruiterCandidateIntakeCreate, RecruiterJobCreate
+from app.schemas.recruiter import (
+    RecruiterCandidateIntakeCreate,
+    RecruiterCandidateStatusUpdate,
+    RecruiterJobCreate,
+    RecruiterJobUpdate,
+)
 
 JOB_UPLOAD_DOCUMENT_TYPES = {
     DocumentType.JOB_DESCRIPTION,
@@ -63,6 +68,25 @@ def list_recruiter_jobs(db: Session, *, recruiter: User) -> list[RecruiterJob]:
     return list(db.execute(statement).scalars().all())
 
 
+def update_recruiter_job(
+    db: Session,
+    *,
+    recruiter: User,
+    job_id: int,
+    payload: RecruiterJobUpdate,
+) -> RecruiterJob:
+    job = get_recruiter_job(db, recruiter=recruiter, job_id=job_id)
+    job.title = payload.title
+    job.description = payload.description
+    job.seniority = payload.seniority
+    job.location = payload.location
+    job.skills_required = payload.skills_required
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    return job
+
+
 def get_recruiter_job(db: Session, *, recruiter: User, job_id: int) -> RecruiterJob:
     statement = (
         select(RecruiterJob)
@@ -96,6 +120,7 @@ def create_recruiter_candidate(
         email=str(payload.email) if payload.email else None,
         current_title=payload.current_title,
         notes=payload.notes,
+        shortlist_status=RecruiterCandidateStatus.UNDER_REVIEW,
     )
     db.add(candidate)
     db.commit()
@@ -141,6 +166,27 @@ def validate_candidate_upload_type(document_type: DocumentType) -> None:
         )
 
 
+def update_recruiter_candidate_status(
+    db: Session,
+    *,
+    recruiter: User,
+    job_id: int,
+    candidate_id: int,
+    payload: RecruiterCandidateStatusUpdate,
+) -> RecruiterCandidate:
+    candidate = get_recruiter_candidate(
+        db,
+        recruiter=recruiter,
+        job_id=job_id,
+        candidate_id=candidate_id,
+    )
+    candidate.shortlist_status = payload.shortlist_status
+    db.add(candidate)
+    db.commit()
+    db.refresh(candidate)
+    return candidate
+
+
 def build_recruiter_candidate_response(candidate: RecruiterCandidate):
     from app.schemas.recruiter import RecruiterCandidateResponse
 
@@ -153,6 +199,7 @@ def build_recruiter_candidate_response(candidate: RecruiterCandidate):
             "email": candidate.email,
             "current_title": candidate.current_title,
             "notes": candidate.notes,
+            "shortlist_status": candidate.shortlist_status,
             "document_count": len(candidate.documents),
             "created_at": candidate.created_at,
             "updated_at": candidate.updated_at,

@@ -246,31 +246,68 @@ def build_structured_questions(
     evidence: list[EvidenceChunkResponse],
 ) -> list[dict[str, object]]:
     questions: list[dict[str, object]] = []
+    seen_questions: set[str] = set()
     for item in evidence[:4]:
+        question_text = build_question_text(query=query, evidence=item)
+        if question_text in seen_questions:
+            continue
         questions.append(
             {
                 "category": QUESTION_CATEGORY_BY_DOCUMENT_TYPE.get(item.document_type.value, "impact"),
-                "question": build_question_text(query=query, evidence=item),
+                "question": question_text,
                 "rationale": build_rationale(item),
                 "evidence_chunk_ids": [item.chunk_id],
             }
         )
+        seen_questions.add(question_text)
 
-    while len(questions) < 3:
-        index = len(questions) + 1
-        questions.append(
-            {
-                "category": "impact",
-                "question": f"What measurable outcome best proves your impact on {query}?",
-                "rationale": f"Fallback probe {index} keeps the answer grounded in outcomes instead of broad claims.",
-                "evidence_chunk_ids": [item.chunk_id for item in evidence[:1]],
-            }
-        )
+    for fallback in build_fallback_questions(query=query, evidence=evidence):
+        if len(questions) >= 3:
+            break
+        if fallback["question"] in seen_questions:
+            continue
+        questions.append(fallback)
+        seen_questions.add(str(fallback["question"]))
     return questions
 
 
+def build_fallback_questions(
+    *,
+    query: str,
+    evidence: list[EvidenceChunkResponse],
+) -> list[dict[str, object]]:
+    fallback_chunk_ids = [item.chunk_id for item in evidence[:1]]
+    fallback_questions = [
+        {
+            "category": "impact",
+            "question": f"What measurable outcome best proves your impact on {query}?",
+            "rationale": "Use a metric, scope number, or business result so the answer does not stay generic.",
+            "evidence_chunk_ids": fallback_chunk_ids,
+        },
+        {
+            "category": "scope",
+            "question": f"What was the scale, complexity, or ownership level behind {query}?",
+            "rationale": "Scope details help the answer sound credible even when the retrieved evidence is thin.",
+            "evidence_chunk_ids": fallback_chunk_ids,
+        },
+        {
+            "category": "decision-making",
+            "question": f"Which trade-off or decision mattered most when delivering {query}?",
+            "rationale": "Decision-making questions surface judgment instead of repeating a task summary.",
+            "evidence_chunk_ids": fallback_chunk_ids,
+        },
+        {
+            "category": "stakeholders",
+            "question": f"Who benefited from your work on {query}, and how did you know it worked?",
+            "rationale": "Stakeholder context keeps the answer tied to user or team impact rather than isolated activity.",
+            "evidence_chunk_ids": fallback_chunk_ids,
+        },
+    ]
+    return fallback_questions
+
+
 def build_question_text(*, query: str, evidence: EvidenceChunkResponse) -> str:
-    summary = summarize_text(evidence.content, limit=90)
+    summary = extract_display_sentence(evidence.content, limit=180)
     if evidence.document_type.value == "job_description":
         return f"Which part of your background best matches this requirement: {summary.lower()}?"
     if evidence.document_type.value == "project_notes":
@@ -341,6 +378,20 @@ def summarize_text(text: str, *, limit: int) -> str:
     if len(normalized) <= limit:
         return normalized
     return normalized[: limit - 3].rstrip() + "..."
+
+
+def extract_display_sentence(text: str, *, limit: int) -> str:
+    normalized = " ".join(text.split())
+    if len(normalized) <= limit:
+        return normalized
+
+    sentence_match = re.search(r"^(.{40,}?[.!?])(?:\s|$)", normalized)
+    if sentence_match:
+        sentence = sentence_match.group(1).strip()
+        if len(sentence) <= max(limit + 40, 220):
+            return sentence
+
+    return summarize_text(normalized, limit=limit)
 
 
 def build_star_sections(

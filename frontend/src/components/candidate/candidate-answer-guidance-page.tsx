@@ -14,7 +14,9 @@ function AnswerGuidanceResult({ result }: { result: CandidateAnswerGuidanceResul
           <CardDescription>Start with a direct answer before expanding into supporting detail.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{result.opening_answer}</p>
+          <p className="whitespace-pre-wrap break-words text-sm leading-7 text-[var(--color-ink-muted)]">
+            {result.opening_answer}
+          </p>
           <CitationLinks
             chunkIds={result.evidence.length ? [result.evidence[0].chunk_id] : []}
           />
@@ -35,27 +37,27 @@ function AnswerGuidanceResult({ result }: { result: CandidateAnswerGuidanceResul
         <Card>
           <CardHeader>
             <CardTitle>Talking points</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {result.talking_points.map((item) => (
-              <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-                <p className="text-sm text-[var(--color-ink-muted)]">{item}</p>
-              </div>
-            ))}
-          </CardContent>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {result.talking_points.map((item) => (
+            <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
+              <p className="whitespace-pre-wrap break-words text-sm text-[var(--color-ink-muted)]">{item}</p>
+            </div>
+          ))}
+        </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Follow-up pressure test</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {result.follow_up_questions.map((item) => (
-              <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-                <p className="text-sm text-[var(--color-ink-muted)]">{item}</p>
-              </div>
-            ))}
-          </CardContent>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {result.follow_up_questions.map((item) => (
+            <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
+              <p className="whitespace-pre-wrap break-words text-sm text-[var(--color-ink-muted)]">{item}</p>
+            </div>
+          ))}
+        </CardContent>
         </Card>
       </div>
 
@@ -65,7 +67,9 @@ function AnswerGuidanceResult({ result }: { result: CandidateAnswerGuidanceResul
           <CardDescription>What to tighten before using this answer in a real interview.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{result.stronger_version_tip}</p>
+          <p className="whitespace-pre-wrap break-words text-sm leading-7 text-[var(--color-ink-muted)]">
+            {result.stronger_version_tip}
+          </p>
         </CardContent>
       </Card>
     </div>

@@ -2,12 +2,16 @@ import { apiFetch } from "@/lib/api/client";
 import type {
   CandidateDocument,
   RecruiterCandidate,
+  RecruiterCandidateComparison,
+  RecruiterCandidateShortlistStatus,
   RecruiterCandidatePayload,
   RecruiterCandidateReview,
   RecruiterDashboardSummary,
   RecruiterJobDetail,
   RecruiterJobList,
   RecruiterJobPayload,
+  RecruiterProfile,
+  RecruiterProfilePayload,
   RecruiterJobReview,
 } from "@/lib/api/types";
 
@@ -15,6 +19,49 @@ export function fetchRecruiterDashboard(accessToken: string) {
   return apiFetch<RecruiterDashboardSummary>("/recruiter/dashboard", {
     method: "GET",
     accessToken,
+  });
+}
+
+export function fetchRecruiterProfile(accessToken: string) {
+  return apiFetch<RecruiterProfile>("/recruiter/profile", {
+    method: "GET",
+    accessToken,
+  });
+}
+
+export function createRecruiterProfile(accessToken: string, payload: RecruiterProfilePayload) {
+  return apiFetch<RecruiterProfile>("/recruiter/profile", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchRecruiterJobComparison(accessToken: string, jobId: number) {
+  return apiFetch<RecruiterCandidateComparison>(`/recruiter/jobs/${jobId}/comparison`, {
+    method: "GET",
+    accessToken,
+  });
+}
+
+export function updateRecruiterCandidateStatus(
+  accessToken: string,
+  jobId: number,
+  candidateId: number,
+  shortlistStatus: RecruiterCandidateShortlistStatus,
+) {
+  return apiFetch<RecruiterCandidate>(`/recruiter/jobs/${jobId}/candidates/${candidateId}/status`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify({ shortlist_status: shortlistStatus }),
+  });
+}
+
+export function updateRecruiterProfile(accessToken: string, payload: RecruiterProfilePayload) {
+  return apiFetch<RecruiterProfile>("/recruiter/profile", {
+    method: "PUT",
+    accessToken,
+    body: JSON.stringify(payload),
   });
 }
 
@@ -28,6 +75,14 @@ export function fetchRecruiterJobs(accessToken: string) {
 export function createRecruiterJob(accessToken: string, payload: RecruiterJobPayload) {
   return apiFetch<RecruiterJobDetail>("/recruiter/jobs", {
     method: "POST",
+    accessToken,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateRecruiterJob(accessToken: string, jobId: number, payload: RecruiterJobPayload) {
+  return apiFetch<RecruiterJobDetail>(`/recruiter/jobs/${jobId}`, {
+    method: "PUT",
     accessToken,
     body: JSON.stringify(payload),
   });

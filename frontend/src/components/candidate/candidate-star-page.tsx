@@ -20,7 +20,7 @@ function StarSectionCard({
         <CardTitle>{label}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{content}</p>
+        <p className="whitespace-pre-wrap break-words text-sm leading-7 text-[var(--color-ink-muted)]">{content}</p>
         <CitationLinks chunkIds={chunkIds} />
       </CardContent>
     </Card>
@@ -74,7 +74,7 @@ function StarResult({ result }: { result: CandidateStarAnswerResult }) {
           {result.missing_signals.length ? (
             result.missing_signals.map((item) => (
               <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-                <p className="text-sm text-[var(--color-ink-muted)]">{item}</p>
+                <p className="whitespace-pre-wrap break-words text-sm text-[var(--color-ink-muted)]">{item}</p>
               </div>
             ))
           ) : (

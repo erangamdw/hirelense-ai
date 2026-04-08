@@ -39,19 +39,27 @@ export function CandidateAssistantNav() {
           <Link
             key={route.href}
             href={route.href}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
               "rounded-[28px] border px-5 py-4 transition-colors",
               isActive
-                ? "border-[var(--color-ink)] bg-[var(--color-ink)] text-[var(--color-paper)]"
+                ? "border-[var(--color-ink)] bg-[var(--color-ink)] !text-white shadow-[0_18px_48px_-32px_rgba(21,21,21,0.95)]"
                 : "border-[var(--color-border)] bg-white text-[var(--color-ink)] hover:bg-[var(--color-panel)]",
             )}
+            style={isActive ? { color: "#ffffff" } : undefined}
           >
-            <p className="text-sm font-semibold">{route.label}</p>
+            <p
+              className={cn("text-sm font-semibold", isActive ? "!text-white" : "text-[var(--color-ink)]")}
+              style={isActive ? { color: "#ffffff" } : undefined}
+            >
+              {route.label}
+            </p>
             <p
               className={cn(
                 "mt-2 text-sm",
-                isActive ? "text-[var(--color-paper)]/80" : "text-[var(--color-ink-muted)]",
+                isActive ? "!text-white" : "text-[var(--color-ink-muted)]",
               )}
+              style={isActive ? { color: "rgba(255,255,255,0.82)" } : undefined}
             >
               {route.description}
             </p>
