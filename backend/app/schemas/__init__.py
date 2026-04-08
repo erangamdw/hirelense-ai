@@ -12,6 +12,8 @@ from app.schemas.document import (
     DocumentIndexingResponse,
     DocumentResponse,
 )
+from app.schemas.generation import GenerationQueryRequest, GenerationResponse, GroundedPromptType
+from app.schemas.retrieval import EvidenceChunkResponse, RetrievalQueryRequest, RetrievalResponse
 
 __all__ = [
     "AuthResponse",
@@ -24,6 +26,12 @@ __all__ = [
     "DocumentChunkingResponse",
     "DocumentIndexingResponse",
     "DocumentResponse",
+    "EvidenceChunkResponse",
+    "GenerationQueryRequest",
+    "GenerationResponse",
+    "GroundedPromptType",
     "LoginRequest",
+    "RetrievalQueryRequest",
+    "RetrievalResponse",
     "RegisterRequest",
 ]
