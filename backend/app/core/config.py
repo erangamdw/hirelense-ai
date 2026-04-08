@@ -27,6 +27,12 @@ class Settings:
     langchain_chunk_size: int = int(os.getenv("LANGCHAIN_CHUNK_SIZE", "1000"))
     langchain_chunk_overlap: int = int(os.getenv("LANGCHAIN_CHUNK_OVERLAP", "150"))
     min_chunk_characters: int = int(os.getenv("MIN_CHUNK_CHARACTERS", "120"))
+    embedding_provider: str = os.getenv("EMBEDDING_PROVIDER", "deterministic")
+    openai_api_key: str | None = os.getenv("OPENAI_API_KEY") or None
+    openai_base_url: str | None = os.getenv("OPENAI_BASE_URL") or None
+    openai_embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+    vector_db_path: str = os.getenv("VECTOR_DB_PATH", str(BASE_DIR / "chroma"))
+    chroma_collection_prefix: str = os.getenv("CHROMA_COLLECTION_PREFIX", "hirelense-ai")
     jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "change-this-in-production")
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))

@@ -6,7 +6,12 @@ from app.schemas.candidate_profile import (
     CandidateProfileResponse,
     CandidateProfileUpdate,
 )
-from app.schemas.document import ChunkResponse, DocumentChunkingResponse, DocumentResponse
+from app.schemas.document import (
+    ChunkResponse,
+    DocumentChunkingResponse,
+    DocumentIndexingResponse,
+    DocumentResponse,
+)
 
 __all__ = [
     "AuthResponse",
@@ -17,6 +22,7 @@ __all__ = [
     "ChunkResponse",
     "CurrentUserResponse",
     "DocumentChunkingResponse",
+    "DocumentIndexingResponse",
     "DocumentResponse",
     "LoginRequest",
     "RegisterRequest",

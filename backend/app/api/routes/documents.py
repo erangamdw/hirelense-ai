@@ -6,14 +6,21 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user, get_db_session
 from app.models.document import DocumentType
 from app.models.user import User
-from app.schemas.document import DocumentChunkingResponse, ChunkResponse, DocumentResponse
+from app.schemas.document import (
+    ChunkResponse,
+    DocumentChunkingResponse,
+    DocumentIndexingResponse,
+    DocumentResponse,
+)
 from app.services.documents import (
     DocumentNotFoundError,
     DocumentChunkingError,
+    DocumentIndexingError,
     DocumentParsingError,
     DocumentValidationError,
     chunk_stored_document,
     create_document_record,
+    index_document_chunks,
     parse_stored_document,
     save_upload_file,
 )
@@ -99,4 +106,32 @@ def chunk_document(
         document_id=document_id,
         chunk_count=len(chunks),
         chunks=[ChunkResponse.model_validate(chunk) for chunk in chunks],
+    )
+
+
+@router.post("/{document_id}/reindex", response_model=DocumentIndexingResponse)
+def reindex_document(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> DocumentIndexingResponse:
+    try:
+        result = index_document_chunks(db, user=current_user, document_id=document_id)
+    except DocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except DocumentIndexingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+    return DocumentIndexingResponse(
+        document_id=result.document_id,
+        chunk_count=result.chunk_count,
+        collection_name=result.collection_name,
+        vector_ids=result.vector_ids,
+        indexing_status=result.indexing_status,
     )

@@ -5,6 +5,11 @@ from app.services.documents.chunking import (
     chunk_stored_document,
     create_langchain_documents,
 )
+from app.services.documents.indexing import (
+    DocumentIndexingError,
+    DocumentIndexingResult,
+    index_document_chunks,
+)
 from app.services.documents.parsing import (
     DocumentNotFoundError,
     DocumentParsingError,
@@ -25,6 +30,8 @@ __all__ = [
     "ChunkDraft",
     "DocumentNotFoundError",
     "DocumentChunkingError",
+    "DocumentIndexingError",
+    "DocumentIndexingResult",
     "DocumentParsingError",
     "DocumentValidationError",
     "ParsingResult",
@@ -34,6 +41,7 @@ __all__ = [
     "create_document_record",
     "create_langchain_documents",
     "get_owned_document",
+    "index_document_chunks",
     "parse_stored_document",
     "save_upload_file",
 ]

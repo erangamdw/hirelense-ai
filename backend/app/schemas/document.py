@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.document import DocumentParsingStatus, DocumentType
+from app.models.document import DocumentIndexingStatus, DocumentParsingStatus, DocumentType
 
 
 class DocumentResponse(BaseModel):
@@ -23,6 +23,9 @@ class DocumentResponse(BaseModel):
     parsing_status: DocumentParsingStatus
     parsing_error: str | None
     parsed_at: datetime | None
+    indexing_status: DocumentIndexingStatus
+    indexing_error: str | None
+    indexed_at: datetime | None
     created_at: datetime
 
 
@@ -44,3 +47,11 @@ class DocumentChunkingResponse(BaseModel):
     document_id: int
     chunk_count: int
     chunks: list[ChunkResponse]
+
+
+class DocumentIndexingResponse(BaseModel):
+    document_id: int
+    chunk_count: int
+    collection_name: str
+    vector_ids: list[str]
+    indexing_status: DocumentIndexingStatus

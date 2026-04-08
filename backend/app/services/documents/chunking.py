@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.chunk import Chunk
-from app.models.document import Document, DocumentParsingStatus
+from app.models.document import Document, DocumentIndexingStatus, DocumentParsingStatus
 from app.models.user import User
 from app.services.documents.parsing import get_owned_document
 
@@ -240,6 +240,10 @@ def chunk_stored_document(db: Session, *, user: User, document_id: int) -> list[
         for draft in drafts
     ]
     db.add_all(chunks)
+    document.indexing_status = DocumentIndexingStatus.PENDING
+    document.indexing_error = None
+    document.indexed_at = None
+    db.add(document)
     db.commit()
 
     for chunk in chunks:

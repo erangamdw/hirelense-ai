@@ -9,7 +9,7 @@ import fitz
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.document import Document, DocumentParsingStatus
+from app.models.document import Document, DocumentIndexingStatus, DocumentParsingStatus
 from app.models.user import User
 
 
@@ -103,6 +103,9 @@ def parse_stored_document(db: Session, *, user: User, document_id: int) -> Docum
         document.parsing_error = "Stored file could not be found on disk."
         document.parsed_text = None
         document.parsed_at = None
+        document.indexing_status = DocumentIndexingStatus.PENDING
+        document.indexing_error = None
+        document.indexed_at = None
         db.add(document)
         db.commit()
         db.refresh(document)
@@ -116,6 +119,9 @@ def parse_stored_document(db: Session, *, user: User, document_id: int) -> Docum
         document.parsing_error = error_message
         document.parsed_text = None
         document.parsed_at = None
+        document.indexing_status = DocumentIndexingStatus.PENDING
+        document.indexing_error = None
+        document.indexed_at = None
         db.add(document)
         db.commit()
         db.refresh(document)
@@ -125,6 +131,9 @@ def parse_stored_document(db: Session, *, user: User, document_id: int) -> Docum
     document.parsing_status = DocumentParsingStatus.SUCCEEDED
     document.parsing_error = None
     document.parsed_at = datetime.now(timezone.utc)
+    document.indexing_status = DocumentIndexingStatus.PENDING
+    document.indexing_error = None
+    document.indexed_at = None
     db.add(document)
     db.commit()
     db.refresh(document)

@@ -23,6 +23,12 @@ class DocumentParsingStatus(str, Enum):
     FAILED = "failed"
 
 
+class DocumentIndexingStatus(str, Enum):
+    PENDING = "pending"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
 class Document(Base):
     __tablename__ = "documents"
 
@@ -59,6 +65,18 @@ class Document(Base):
     )
     parsing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     parsed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    indexing_status: Mapped[DocumentIndexingStatus] = mapped_column(
+        SqlEnum(
+            DocumentIndexingStatus,
+            name="document_indexing_status",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+            validate_strings=True,
+        ),
+        nullable=False,
+        default=DocumentIndexingStatus.PENDING,
+    )
+    indexing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
