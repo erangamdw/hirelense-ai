@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
 
@@ -43,4 +43,11 @@ class User(Base):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+    candidate_profile = relationship(
+        "CandidateProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
