@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 import { CitationLinks, CandidateGenerationWorkspace } from "@/components/candidate/candidate-generation-workspace";
 import { GeneratedRichText } from "@/components/shared/generated-rich-text";
+import { ResultSectionTabs } from "@/components/shared/result-section-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,32 +147,39 @@ function SkillGapResult({ result }: { result: CandidateSkillGapAnalysisResult })
   const [activeDetail, setActiveDetail] = useState<SkillGapDetailState>(null);
   const activeStrength = activeDetail?.kind === "strength" ? result.strengths[activeDetail.index] : null;
   const activeGap = activeDetail?.kind === "gap" ? result.missing_signals[activeDetail.index] : null;
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Analysis summary</CardTitle>
-          <CardDescription>Where your current evidence is strong and where interview risk is still high.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-[32px] border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(245,242,236,0.95)_100%)] px-6 py-6 shadow-[0_24px_60px_-34px_rgba(27,31,59,0.45)]">
-            <div className="mb-4 flex items-center gap-3">
-              <span className="rounded-full bg-[var(--color-ink)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-paper)]">
-                Overview
-              </span>
-              <p className="text-sm font-medium text-[var(--color-ink-soft)]">Read this first before drilling into specific strengths and gaps.</p>
+  const tabs = [
+    {
+      id: "analysis-summary",
+      label: "Summary",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Analysis summary</CardTitle>
+            <CardDescription>Where your current evidence is strong and where interview risk is still high.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-[32px] border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(245,242,236,0.95)_100%)] px-6 py-6 shadow-[0_24px_60px_-34px_rgba(27,31,59,0.45)]">
+              <div className="mb-4 flex items-center gap-3">
+                <span className="rounded-full bg-[var(--color-ink)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-paper)]">
+                  Overview
+                </span>
+                <p className="text-sm font-medium text-[var(--color-ink-soft)]">Read this first before drilling into specific strengths and gaps.</p>
+              </div>
+              <GeneratedRichText
+                text={emphasizeSummaryTopics(result.analysis_summary)}
+                className="space-y-5 text-[15px] leading-8 text-[var(--color-ink-muted)]"
+                variant="plain"
+              />
             </div>
-            <GeneratedRichText
-              text={emphasizeSummaryTopics(result.analysis_summary)}
-              className="space-y-5 text-[15px] leading-8 text-[var(--color-ink-muted)]"
-              variant="plain"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-6">
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      id: "strengths",
+      label: "Strengths",
+      badge: String(result.strengths.length),
+      content: (
         <Card>
           <CardHeader>
             <CardTitle>Strengths</CardTitle>
@@ -203,8 +211,7 @@ function SkillGapResult({ result }: { result: CandidateSkillGapAnalysisResult })
                       {buildPreview(item.summary)}
                     </p>
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
-                    <span>Full detail in popup</span>
+                  <div className="mt-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
                     <span>{item.evidence_chunk_ids.length ? `${item.evidence_chunk_ids.length} citation${item.evidence_chunk_ids.length > 1 ? "s" : ""}` : "No citations"}</span>
                   </div>
                 </button>
@@ -216,7 +223,13 @@ function SkillGapResult({ result }: { result: CandidateSkillGapAnalysisResult })
             )}
           </CardContent>
         </Card>
-
+      ),
+    },
+    {
+      id: "skill-gaps",
+      label: "Skill gaps",
+      badge: String(result.missing_signals.length),
+      content: (
         <Card>
           <CardHeader>
             <CardTitle>Skill gaps</CardTitle>
@@ -260,7 +273,7 @@ function SkillGapResult({ result }: { result: CandidateSkillGapAnalysisResult })
                       {buildPreview(item.recommendation, 110)}
                     </p>
                   </div>
-                  <div className="mt-3 flex justify-end text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
+                  <div className="mt-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
                     <span>{item.evidence_chunk_ids.length ? `${item.evidence_chunk_ids.length} citation${item.evidence_chunk_ids.length > 1 ? "s" : ""}` : "No citations"}</span>
                   </div>
                 </button>
@@ -272,37 +285,49 @@ function SkillGapResult({ result }: { result: CandidateSkillGapAnalysisResult })
             )}
           </CardContent>
         </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Improvement actions</CardTitle>
-          <CardDescription>Practical next steps you can take to close the most important gaps.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {result.improvement_actions.length ? (
-            result.improvement_actions.map((item, index) => (
-              <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4 shadow-[0_14px_34px_-30px_rgba(27,31,59,0.35)]">
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-[var(--color-ink)] px-2 text-xs font-semibold text-[var(--color-paper)]">
-                    {index + 1}
-                  </span>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-[var(--color-ink)]">Action item</p>
-                    <div className="mt-2">
-                      <GeneratedRichText text={normalizeGeneratedText(item)} variant="plain" />
+      ),
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      badge: String(result.improvement_actions.length),
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Improvement actions</CardTitle>
+            <CardDescription>Practical next steps you can take to close the most important gaps.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {result.improvement_actions.length ? (
+              result.improvement_actions.map((item, index) => (
+                <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4 shadow-[0_14px_34px_-30px_rgba(27,31,59,0.35)]">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-[var(--color-ink)] px-2 text-xs font-semibold text-[var(--color-paper)]">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-[var(--color-ink)]">Action item</p>
+                      <div className="mt-2">
+                        <GeneratedRichText text={normalizeGeneratedText(item)} variant="plain" />
+                      </div>
                     </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
+                <p className="text-sm text-[var(--color-ink-muted)]">No improvement actions were generated.</p>
               </div>
-            ))
-          ) : (
-            <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
-              <p className="text-sm text-[var(--color-ink-muted)]">No improvement actions were generated.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <ResultSectionTabs tabs={tabs} defaultTabId="analysis-summary" />
 
       {activeStrength ? (
         <SkillGapDetailDialog

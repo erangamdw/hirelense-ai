@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BriefcaseBusiness, FileSearch, LogOut, Sparkles, UserRoundSearch } from "lucide-react";
 
+import { HireLensBrand } from "@/components/brand/hirelens-brand";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -55,18 +56,16 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-[var(--color-page)]">
       <div className="mx-auto flex min-h-screen w-full max-w-7xl gap-6 px-4 py-4 md:px-6 lg:px-8">
-        <aside className="hidden w-72 shrink-0 rounded-[32px] border border-[var(--color-border)] bg-[var(--color-panel)] p-6 lg:flex lg:flex-col">
+        <aside className="hidden h-[calc(100vh-2rem)] w-72 shrink-0 rounded-[32px] border border-[var(--color-border)] bg-[var(--color-panel)] p-6 lg:sticky lg:top-4 lg:flex lg:flex-col">
           <Link href="/" className="flex items-center gap-3 text-[var(--color-ink)]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-accent)] text-sm font-bold uppercase tracking-[0.28em] text-white">
-              HL
-            </div>
+            <HireLensBrand compact iconOnly />
             <div>
-              <p className="text-xs uppercase tracking-[0.32em] text-[var(--color-ink-soft)]">HireLens AI</p>
-              <p className="text-sm font-semibold">{role === "recruiter" ? "Recruiter console" : "Candidate console"}</p>
+              <p className="text-xs uppercase tracking-[0.32em] text-[var(--color-ink-soft)]">Hire Lens AI</p>
+              <p className="mt-1 text-sm font-semibold">{role === "recruiter" ? "Recruiter console" : "Candidate console"}</p>
             </div>
           </Link>
 
-          <nav className="mt-10 flex flex-col gap-2">
+          <nav className="mt-10 flex-1 space-y-2 overflow-y-auto pr-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -93,21 +92,23 @@ export function AppShell({
             })}
           </nav>
 
-          <div className="mt-auto rounded-[28px] bg-[var(--color-panel-strong)] p-5">
+          <div className="mt-6 rounded-[28px] bg-[var(--color-panel-strong)] p-5">
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-ink-soft)]">Signed in</p>
             <p className="mt-2 text-sm font-semibold text-[var(--color-ink)]">{user?.full_name || user?.email || "Current user"}</p>
             <p className="mt-1 text-sm text-[var(--color-ink-muted)]">{user?.email}</p>
-            <Button
-              className="mt-5 w-full"
-              variant="secondary"
-              onClick={() => {
-                signOut();
-                router.push("/login");
-              }}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </Button>
+            <div className="mt-4 flex justify-start">
+              <Button
+                className="h-8 px-3 text-xs"
+                variant="secondary"
+                onClick={() => {
+                  signOut();
+                  router.push("/login");
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </Button>
+            </div>
           </div>
         </aside>
 

@@ -21,14 +21,14 @@ export function CandidateEvidenceSidePanel({
   onOpenEvidence: (chunkId: number) => void;
 }) {
   return (
-    <Card className="xl:sticky xl:top-6">
+    <Card>
       <CardHeader>
-        <CardTitle>Evidence side panel</CardTitle>
+        <CardTitle>Evidence references</CardTitle>
         <CardDescription>
           Source labels, citations, and retrieved snippets for the current generated output.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto">
+      <CardContent className="space-y-3 xl:max-h-[28rem] xl:overflow-y-auto">
         {evidence.length ? (
           <>
             <p className="text-sm leading-6 text-[var(--color-ink-muted)]">

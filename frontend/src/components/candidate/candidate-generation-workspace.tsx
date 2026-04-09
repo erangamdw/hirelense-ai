@@ -646,209 +646,206 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
       <div className="space-y-6">
         <CandidateAssistantNav />
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_24rem]">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-[var(--color-ink)]" htmlFor="candidate-generation-query">
-                    {promptLabel}
-                  </label>
-                  <Textarea
-                    id="candidate-generation-query"
-                    className="min-h-36"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder={promptPlaceholder}
-                  />
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[var(--color-ink)]" htmlFor="candidate-generation-query">
+                  {promptLabel}
+                </label>
+                <Textarea
+                  id="candidate-generation-query"
+                  className="min-h-36"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={promptPlaceholder}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-[var(--color-ink)]">Document scope</p>
+                <div className="grid gap-3">
+                  {documentTypeOptions.map((option) => (
+                    <label
+                      key={option.value}
+                      className="flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-ink)]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedDocumentTypes.includes(option.value)}
+                        onChange={() => toggleDocumentType(option.value)}
+                        className="mt-1 h-4 w-4 rounded border-[var(--color-border)]"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
                 </div>
 
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-[var(--color-ink)]">Document scope</p>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {documentTypeOptions.map((option) => (
-                      <label
-                        key={option.value}
-                        className="flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-ink)]"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedDocumentTypes.includes(option.value)}
-                          onChange={() => toggleDocumentType(option.value)}
-                          className="mt-1 h-4 w-4 rounded border-[var(--color-border)]"
-                        />
-                        <span>{option.label}</span>
-                      </label>
-                    ))}
-                  </div>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-[var(--color-ink)]">Specific documents</p>
+                  <p className="text-sm text-[var(--color-ink-muted)]">
+                    Keep the assistant focused by choosing the exact files you want it to rely on, especially for job descriptions.
+                  </p>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-[var(--color-ink)]">Specific documents</p>
-                    <p className="text-sm text-[var(--color-ink-muted)]">
-                      Narrow the selected types to exact files when you want role-specific results, especially for job descriptions.
-                    </p>
-                  </div>
-
-                  {isLoadingDocuments ? (
-                    <p className="text-sm text-[var(--color-ink-muted)]">Loading your indexed documents...</p>
-                  ) : documentsError ? (
-                    <p className="text-sm text-[var(--color-danger)]">{documentsError}</p>
-                  ) : availableDocuments.length === 0 ? (
-                    <p className="text-sm text-[var(--color-ink-muted)]">
-                      No indexed documents are ready yet. Upload, parse, chunk, and reindex a document before using file-level scope.
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {documentGroups.map(({ option, documents }) => {
-                        if (!documents.length) {
-                          return (
-                            <div
-                              key={option.value}
-                              className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-sm text-[var(--color-ink-muted)]"
-                            >
-                              {`No indexed ${option.label.toLowerCase()} documents are ready yet.`}
-                            </div>
-                          );
-                        }
-
-                        const selectedCount = documents.filter((document) => selectedDocumentIds.includes(document.id)).length;
-
+                {isLoadingDocuments ? (
+                  <p className="text-sm text-[var(--color-ink-muted)]">Loading your indexed documents...</p>
+                ) : documentsError ? (
+                  <p className="text-sm text-[var(--color-danger)]">{documentsError}</p>
+                ) : availableDocuments.length === 0 ? (
+                  <p className="text-sm text-[var(--color-ink-muted)]">
+                    No indexed documents are ready yet. Upload, parse, chunk, and reindex a document before using file-level scope.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {documentGroups.map(({ option, documents }) => {
+                      if (!documents.length) {
                         return (
                           <div
                             key={option.value}
-                            className="space-y-3 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4"
+                            className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-sm text-[var(--color-ink-muted)]"
                           >
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <button
-                                type="button"
-                                className="min-w-0 flex-1 text-left"
-                                onClick={() => toggleGroupCollapsed(option.value)}
-                              >
-                                <p className="text-sm font-semibold text-[var(--color-ink)]">{option.label}</p>
-                                <p className="text-xs text-[var(--color-ink-muted)]">
-                                  {option.value === "job_description"
-                                    ? `${selectedCount ? "1 primary file selected" : "No primary file selected"}`
-                                    : `${selectedCount} of ${documents.length} selected`}
-                                </p>
-                              </button>
-                              <div className="flex flex-wrap gap-2">
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  className="h-9 px-3 text-xs"
-                                  onClick={() => selectDocumentsForType(option.value, true)}
-                                >
-                                  {option.value === "job_description" ? "Select latest" : "Use all"}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  className="h-9 px-3 text-xs"
-                                  onClick={() => selectDocumentsForType(option.value, false)}
-                                >
-                                  Clear
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  className="h-9 px-3 text-xs"
-                                  onClick={() => toggleGroupCollapsed(option.value)}
-                                >
-                                  {collapsedGroups[option.value] ? "Expand" : "Collapse"}
-                                </Button>
-                              </div>
-                            </div>
-
-                            {collapsedGroups[option.value] ? null : (
-                              <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                                {documents.map((document) => (
-                                  <label
-                                    key={document.id}
-                                    className="flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-ink)]"
-                                  >
-                                    <input
-                                      type={option.value === "job_description" ? "radio" : "checkbox"}
-                                      name={option.value === "job_description" ? "primary-job-description" : undefined}
-                                      checked={selectedDocumentIds.includes(document.id)}
-                                      onChange={() => toggleDocumentSelection(document.id)}
-                                      className="mt-1 h-4 w-4 border-[var(--color-border)]"
-                                    />
-                                    <span className="min-w-0 space-y-1">
-                                      <span className="flex flex-wrap items-center gap-2">
-                                        <span className="block break-words font-medium">{document.original_filename}</span>
-                                        {option.value === "job_description" && defaultJobDescriptionId === document.id ? (
-                                          <Badge>Default</Badge>
-                                        ) : null}
-                                      </span>
-                                      <span className="block text-xs text-[var(--color-ink-muted)]">{document.created_at.slice(0, 10)}</span>
-                                      {option.value === "job_description" ? (
-                                        <button
-                                          type="button"
-                                          className="text-xs font-semibold text-[var(--color-accent)]"
-                                          onClick={(event) => {
-                                            event.preventDefault();
-                                            event.stopPropagation();
-                                            handleSetDefaultJobDescription(document.id);
-                                          }}
-                                        >
-                                          {defaultJobDescriptionId === document.id ? "Default job description" : "Set as default"}
-                                        </button>
-                                      ) : null}
-                                    </span>
-                                  </label>
-                                ))}
-                              </div>
-                            )}
+                            {`No indexed ${option.label.toLowerCase()} documents are ready yet.`}
                           </div>
                         );
-                      })}
-                    </div>
-                  )}
-                </div>
+                      }
 
-                {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
+                      const selectedCount = documents.filter((document) => selectedDocumentIds.includes(document.id)).length;
 
-                <div className="flex flex-wrap gap-3">
-                  <Button type="button" disabled={isGenerating} onClick={() => void handleGenerate()}>
-                    {isGenerating ? generatingButtonLabel : generateButtonLabel}
-                  </Button>
-                  <Button type="button" variant="secondary" onClick={resetWorkspaceState}>
-                    Reset
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={isSaving || result === null}
-                    onClick={() => void handleSave()}
-                  >
-                    {isSaving ? "Saving report..." : "Save report"}
-                  </Button>
-                  <Link href="/candidate/reports" className="inline-flex h-11 items-center text-sm font-semibold text-[var(--color-accent)]">
-                    Open saved reports
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
+                      return (
+                        <div
+                          key={option.value}
+                          className="space-y-3 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <button
+                              type="button"
+                              className="min-w-0 flex-1 text-left"
+                              onClick={() => toggleGroupCollapsed(option.value)}
+                            >
+                              <p className="text-sm font-semibold text-[var(--color-ink)]">{option.label}</p>
+                              <p className="text-xs text-[var(--color-ink-muted)]">
+                                {option.value === "job_description"
+                                  ? `${selectedCount ? "1 primary file selected" : "No primary file selected"}`
+                                  : `${selectedCount} of ${documents.length} selected`}
+                              </p>
+                            </button>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="h-9 px-3 text-xs"
+                                onClick={() => selectDocumentsForType(option.value, true)}
+                              >
+                                {option.value === "job_description" ? "Select latest" : "Use all"}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="h-9 px-3 text-xs"
+                                onClick={() => selectDocumentsForType(option.value, false)}
+                              >
+                                Clear
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="h-9 px-3 text-xs"
+                                onClick={() => toggleGroupCollapsed(option.value)}
+                              >
+                                {collapsedGroups[option.value] ? "Expand" : "Collapse"}
+                              </Button>
+                            </div>
+                          </div>
 
-            <div className="space-y-6 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto xl:pr-2">
-              {result ? (
-                <>
-                  {renderResult(result)}
-                  <GenerationMetaCard result={result} saveMessage={saveMessage} />
-                </>
-              ) : (
-                <EmptyState title={emptyResultTitle} message={emptyResultMessage} />
-              )}
-            </div>
+                          {collapsedGroups[option.value] ? null : (
+                            <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                              {documents.map((document) => (
+                                <label
+                                  key={document.id}
+                                  className="flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-ink)]"
+                                >
+                                  <input
+                                    type={option.value === "job_description" ? "radio" : "checkbox"}
+                                    name={option.value === "job_description" ? "primary-job-description" : undefined}
+                                    checked={selectedDocumentIds.includes(document.id)}
+                                    onChange={() => toggleDocumentSelection(document.id)}
+                                    className="mt-1 h-4 w-4 border-[var(--color-border)]"
+                                  />
+                                  <span className="min-w-0 space-y-1">
+                                    <span className="flex flex-wrap items-center gap-2">
+                                      <span className="block break-words font-medium">{document.original_filename}</span>
+                                      {option.value === "job_description" && defaultJobDescriptionId === document.id ? (
+                                        <Badge>Default</Badge>
+                                      ) : null}
+                                    </span>
+                                    <span className="block text-xs text-[var(--color-ink-muted)]">{document.created_at.slice(0, 10)}</span>
+                                    {option.value === "job_description" ? (
+                                      <button
+                                        type="button"
+                                        className="text-xs font-semibold text-[var(--color-accent)]"
+                                        onClick={(event) => {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          handleSetDefaultJobDescription(document.id);
+                                        }}
+                                      >
+                                        {defaultJobDescriptionId === document.id ? "Default job description" : "Set as default"}
+                                      </button>
+                                    ) : null}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
+
+              <div className="flex flex-wrap gap-3">
+                <Button type="button" disabled={isGenerating} onClick={() => void handleGenerate()}>
+                  {isGenerating ? generatingButtonLabel : generateButtonLabel}
+                </Button>
+                <Button type="button" variant="secondary" onClick={resetWorkspaceState}>
+                  Reset
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isSaving || result === null}
+                  onClick={() => void handleSave()}
+                >
+                  {isSaving ? "Saving report..." : "Save report"}
+                </Button>
+                <Link href="/candidate/reports" className="inline-flex h-11 items-center text-sm font-semibold text-[var(--color-accent)]">
+                  Open saved reports
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            {result ? (
+              <>
+                {renderResult(result)}
+                <GenerationMetaCard result={result} saveMessage={saveMessage} />
+                <CandidateEvidenceSidePanel evidence={evidence} onOpenEvidence={(chunkId) => openEvidence([chunkId])} />
+              </>
+            ) : (
+              <EmptyState title={emptyResultTitle} message={emptyResultMessage} />
+            )}
           </div>
-
-          <CandidateEvidenceSidePanel evidence={evidence} onOpenEvidence={(chunkId) => openEvidence([chunkId])} />
         </div>
 
         <CandidateEvidenceViewer

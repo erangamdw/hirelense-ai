@@ -2,6 +2,7 @@
 
 import { CitationLinks, CandidateGenerationWorkspace } from "@/components/candidate/candidate-generation-workspace";
 import { GeneratedRichText } from "@/components/shared/generated-rich-text";
+import { ResultSectionTabs } from "@/components/shared/result-section-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateCandidateInterviewQuestions } from "@/lib/api/generation";
@@ -33,48 +34,62 @@ function extractPromptPresentation(question: string) {
 }
 
 function QuestionsResult({ result }: { result: CandidateInterviewQuestionsResult }) {
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Overview</CardTitle>
-          <CardDescription>A short summary of what the interviewer is likely to probe based on your selected evidence.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-panel)] px-5 py-5">
-            <GeneratedRichText text={result.overview} variant="framed" />
-          </div>
-        </CardContent>
-      </Card>
+  const tabs = [
+    {
+      id: "overview",
+      label: "Overview",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Overview</CardTitle>
+            <CardDescription>A short summary of what the interviewer is likely to probe based on your selected evidence.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-panel)] px-5 py-5">
+              <GeneratedRichText text={result.overview} variant="framed" />
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      id: "questions",
+      label: "Questions",
+      badge: String(result.questions.length),
+      content: (
+        <div className="grid gap-4">
+          {result.questions.map((item, index) => {
+            const prompt = extractPromptPresentation(item.question);
 
-      <div className="grid gap-4">
-        {result.questions.map((item, index) => {
-          const prompt = extractPromptPresentation(item.question);
-
-          return (
-            <Card key={`${item.question}-${index}`} className="overflow-hidden">
-              <CardHeader>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge>{`Q${index + 1}`}</Badge>
-                  <Badge>{formatLabel(item.category)}</Badge>
-                  {prompt.heading ? <Badge>{prompt.heading}</Badge> : null}
-                </div>
-                <CardTitle className="break-words text-xl leading-8">{prompt.body}</CardTitle>
-                <div className="mt-3 rounded-2xl bg-white/70 px-4 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">Why this matters</p>
-                  <div className="mt-2">
-                    <GeneratedRichText text={item.rationale} variant="plain" />
+            return (
+              <Card key={`${item.question}-${index}`} className="overflow-hidden">
+                <CardHeader>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge>{`Q${index + 1}`}</Badge>
+                    <Badge>{formatLabel(item.category)}</Badge>
+                    {prompt.heading ? <Badge>{prompt.heading}</Badge> : null}
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CitationLinks chunkIds={item.evidence_chunk_ids} />
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
+                  <CardTitle className="break-words text-xl leading-8">{prompt.body}</CardTitle>
+                  <div className="mt-3 rounded-2xl bg-white/70 px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">Why this matters</p>
+                    <div className="mt-2">
+                      <GeneratedRichText text={item.rationale} variant="plain" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CitationLinks chunkIds={item.evidence_chunk_ids} />
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <ResultSectionTabs tabs={tabs} defaultTabId="questions" />
   );
 }
 

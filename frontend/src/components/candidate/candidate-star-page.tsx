@@ -7,6 +7,7 @@ import { CitationLinks, CandidateGenerationWorkspace } from "@/components/candid
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GeneratedRichText } from "@/components/shared/generated-rich-text";
+import { ResultSectionTabs } from "@/components/shared/result-section-tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateCandidateStarAnswer } from "@/lib/api/generation";
 import type { CandidateStarAnswerResult } from "@/lib/api/types";
@@ -140,8 +141,12 @@ function StarSectionPreviewCards({
                 {buildPreview(section.content)}
               </p>
             </div>
-            <div className="mt-3">
-              <CitationLinks chunkIds={section.chunkIds} />
+            <div className="mt-3 text-right text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">
+              <span>
+                {section.chunkIds.length
+                  ? `${section.chunkIds.length} citation${section.chunkIds.length > 1 ? "s" : ""}`
+                  : "No citations"}
+              </span>
             </div>
           </button>
         ))}
@@ -159,44 +164,62 @@ function StarResult({ result }: { result: CandidateStarAnswerResult }) {
     { key: "result", label: "Result", content: result.result.content, chunkIds: result.result.evidence_chunk_ids },
   ];
   const activeSection = activeDetail ? sections.find((section) => section.key === activeDetail.section) ?? null : null;
+  const tabs = [
+    {
+      id: "editable-draft",
+      label: "STAR draft",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Editable STAR draft</CardTitle>
+            <CardDescription>A complete STAR response you can refine before the interview.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-ink)] px-5 py-5 text-[var(--color-paper)]">
+              <GeneratedRichText
+                text={result.editable_draft}
+                variant="inverse"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      id: "star-sections",
+      label: "STAR sections",
+      badge: String(sections.length),
+      content: <StarSectionPreviewCards sections={sections} onOpen={(key) => setActiveDetail({ section: key })} />,
+    },
+    {
+      id: "missing-signals",
+      label: "Missing signals",
+      badge: String(result.missing_signals.length),
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Missing signals</CardTitle>
+            <CardDescription>Details that would make the answer stronger or more convincing.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {result.missing_signals.length ? (
+              result.missing_signals.map((item) => (
+                <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
+                  <GeneratedRichText text={item} variant="plain" />
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-[var(--color-ink-muted)]">No obvious missing signals were returned.</p>
+            )}
+          </CardContent>
+        </Card>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Editable STAR draft</CardTitle>
-          <CardDescription>A complete STAR response you can refine before the interview.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-ink)] px-5 py-5 text-[var(--color-paper)]">
-            <GeneratedRichText
-              text={result.editable_draft}
-              variant="inverse"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <StarSectionPreviewCards sections={sections} onOpen={(key) => setActiveDetail({ section: key })} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Missing signals</CardTitle>
-          <CardDescription>Details that would make the answer stronger or more convincing.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {result.missing_signals.length ? (
-            result.missing_signals.map((item) => (
-              <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-                <GeneratedRichText text={item} variant="plain" />
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-[var(--color-ink-muted)]">No obvious missing signals were returned.</p>
-          )}
-        </CardContent>
-      </Card>
-
+      <ResultSectionTabs tabs={tabs} defaultTabId="star-sections" />
       <StarSectionDialog section={activeSection} onClose={() => setActiveDetail(null)} />
     </div>
   );

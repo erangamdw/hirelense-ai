@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 import { CitationLinks, CandidateGenerationWorkspace } from "@/components/candidate/candidate-generation-workspace";
 import { GeneratedRichText } from "@/components/shared/generated-rich-text";
+import { ResultSectionTabs } from "@/components/shared/result-section-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -184,58 +185,88 @@ function AnswerGuidanceResult({ result }: { result: CandidateAnswerGuidanceResul
   const [activeDetail, setActiveDetail] = useState<GuidanceDetailState>(null);
   const activeItems =
     activeDetail?.section === "talking_points" ? result.talking_points : result.follow_up_questions;
+  const tabs = [
+    {
+      id: "opening-answer",
+      label: "Opening answer",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Opening answer</CardTitle>
+            <CardDescription>Start with a direct answer before expanding into supporting detail.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <GeneratedRichText text={result.opening_answer} variant="framed" />
+            <CitationLinks
+              chunkIds={result.evidence.length ? [result.evidence[0].chunk_id] : []}
+            />
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      id: "answer-draft",
+      label: "Answer draft",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Answer draft</CardTitle>
+            <CardDescription>A structured answer you can refine, rehearse, and shorten for the interview.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-panel)] px-5 py-5">
+              <GeneratedRichText text={result.answer_draft} variant="framed" />
+            </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      id: "talking-points",
+      label: "Talking points",
+      badge: String(result.talking_points.length),
+      content: (
+        <ExpandableGuidanceSection
+          title="Talking point"
+          sectionLabel="Talking points"
+          items={result.talking_points}
+          onOpen={(index) => setActiveDetail({ section: "talking_points", index })}
+        />
+      ),
+    },
+    {
+      id: "pressure-test",
+      label: "Pressure test",
+      badge: String(result.follow_up_questions.length),
+      content: (
+        <ExpandableGuidanceSection
+          title="Pressure-test question"
+          sectionLabel="Follow-up pressure test"
+          items={result.follow_up_questions}
+          onOpen={(index) => setActiveDetail({ section: "follow_up_questions", index })}
+        />
+      ),
+    },
+    {
+      id: "stronger-tip",
+      label: "Stronger tip",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Stronger version tip</CardTitle>
+            <CardDescription>What to tighten before using this answer in a real interview.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <GeneratedRichText text={result.stronger_version_tip} variant="framed" />
+          </CardContent>
+        </Card>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Opening answer</CardTitle>
-          <CardDescription>Start with a direct answer before expanding into supporting detail.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <GeneratedRichText text={result.opening_answer} variant="framed" />
-          <CitationLinks
-            chunkIds={result.evidence.length ? [result.evidence[0].chunk_id] : []}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Answer draft</CardTitle>
-          <CardDescription>A structured answer you can refine, rehearse, and shorten for the interview.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-panel)] px-5 py-5">
-            <GeneratedRichText text={result.answer_draft} variant="framed" />
-          </div>
-        </CardContent>
-      </Card>
-
-      <ExpandableGuidanceSection
-        title="Talking point"
-        sectionLabel="Talking points"
-        items={result.talking_points}
-        onOpen={(index) => setActiveDetail({ section: "talking_points", index })}
-      />
-
-      <ExpandableGuidanceSection
-        title="Pressure-test question"
-        sectionLabel="Follow-up pressure test"
-        items={result.follow_up_questions}
-        onOpen={(index) => setActiveDetail({ section: "follow_up_questions", index })}
-      />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Stronger version tip</CardTitle>
-          <CardDescription>What to tighten before using this answer in a real interview.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <GeneratedRichText text={result.stronger_version_tip} variant="framed" />
-        </CardContent>
-      </Card>
-
+      <ResultSectionTabs tabs={tabs} defaultTabId="answer-draft" />
       <GuidanceDetailDialog
         title={activeDetail?.section === "talking_points" ? "Talking point" : "Pressure-test question"}
         sectionLabel={activeDetail?.section === "talking_points" ? "Talking points" : "Follow-up pressure test"}
