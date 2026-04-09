@@ -81,7 +81,7 @@ export function RecruiterEditJobPage({ jobId }: { jobId: number }) {
     return (
       <EmptyState
         title="Sign in to edit recruiter jobs"
-        message="This page updates an existing recruiter job via the live recruiter management API."
+        message="Open a recruiter account to edit role requirements, hiring scope, and candidate review criteria."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -92,7 +92,7 @@ export function RecruiterEditJobPage({ jobId }: { jobId: number }) {
     return (
       <ErrorState
         title="Recruiter job edit unavailable"
-        message="This route expects a recruiter account."
+        message="This page is only available to recruiter accounts."
         actionHref="/candidate"
         actionLabel="Open candidate view"
       />
@@ -249,6 +249,7 @@ export function RecruiterEditJobPage({ jobId }: { jobId: number }) {
               <p className="mt-2 leading-6">{job.description}</p>
             </div>
             <p>{`${job.candidate_count} candidates and ${job.linked_document_count} linked job documents currently depend on this scope.`}</p>
+            <p>Keep the role description current so screening and interview outputs stay aligned with the job you are hiring for.</p>
             <Link className="inline-flex font-semibold text-[var(--color-accent)]" href={`/recruiter/jobs/${jobId}`}>
               Review job detail
             </Link>

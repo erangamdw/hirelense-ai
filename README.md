@@ -254,3 +254,7 @@ Current project decision:
 - the repo is already strong enough as a local-evaluator final project
 - deployment is optional polish, not a blocker for demonstrating the architecture or workflows
 - if time is limited, prioritize screenshots/demo assets over hosting work
+
+For production-oriented repo guidance, see:
+- `docs/DEPLOYMENT.md`
+- `docs/MONITORING.md`

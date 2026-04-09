@@ -119,7 +119,7 @@ export function CandidateProfilePage() {
     return (
       <EmptyState
         title="Sign in to manage your candidate profile"
-        message="The candidate profile form is wired to the live backend profile API."
+        message="Keep your background, links, and target roles up to date before generating interview-prep outputs."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -130,7 +130,7 @@ export function CandidateProfilePage() {
     return (
       <ErrorState
         title="Candidate profile unavailable"
-        message="This route expects a candidate account."
+        message="This page is only available to candidate accounts."
         actionHref="/recruiter"
         actionLabel="Open recruiter view"
       />
@@ -145,7 +145,7 @@ export function CandidateProfilePage() {
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
-        <CardDescription>Keep target roles, links, and core context aligned with the backend candidate profile record.</CardDescription>
+        <CardDescription>Update the profile details that shape how the assistant frames your experience and target roles.</CardDescription>
       </CardHeader>
       <CardContent>
         <form

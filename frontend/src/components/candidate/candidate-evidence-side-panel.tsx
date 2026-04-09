@@ -1,20 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getEvidenceMetaLine, getEvidenceSourceTitle } from "@/components/shared/evidence-display";
 import type { EvidenceChunk } from "@/lib/api/types";
 import { formatLabel } from "@/lib/utils";
-
-function buildEvidenceMeta(item: EvidenceChunk) {
-  return [
-    item.source_label,
-    formatLabel(item.document_type),
-    item.section_title,
-    item.page_number ? `Page ${item.page_number}` : null,
-    item.score_note,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
 
 function buildEvidencePreview(content: string, maxLength = 280) {
   if (content.length <= maxLength) {
@@ -39,7 +28,7 @@ export function CandidateEvidenceSidePanel({
           Source labels, citations, and retrieved snippets for the current generated output.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto">
         {evidence.length ? (
           <>
             <p className="text-sm leading-6 text-[var(--color-ink-muted)]">
@@ -56,8 +45,10 @@ export function CandidateEvidenceSidePanel({
                   <Badge>{`C${item.chunk_id}`}</Badge>
                   <Badge>{formatLabel(item.document_type)}</Badge>
                 </div>
-                <p className="mt-3 text-sm font-medium text-[var(--color-ink)]">{item.source_label}</p>
-                <p className="mt-1 text-sm text-[var(--color-ink-muted)]">{buildEvidenceMeta(item)}</p>
+                <p className="mt-3 text-sm font-medium text-[var(--color-ink)]">{getEvidenceSourceTitle(item)}</p>
+                {getEvidenceMetaLine(item) ? (
+                  <p className="mt-1 text-sm text-[var(--color-ink-muted)]">{getEvidenceMetaLine(item)}</p>
+                ) : null}
                 <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[var(--color-ink-muted)]">
                   {buildEvidencePreview(item.content)}
                 </p>

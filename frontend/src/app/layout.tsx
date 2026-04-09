@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "HireLens AI",
-  description: "Frontend foundation for candidate and recruiter workflows.",
+  description: "Evidence-backed interview preparation and recruiter screening workflows for candidates and hiring teams.",
 };
 
 export default function RootLayout({
@@ -14,8 +14,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <body className="min-h-full" suppressHydrationWarning>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

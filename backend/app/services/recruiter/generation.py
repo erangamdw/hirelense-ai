@@ -35,6 +35,7 @@ class RecruiterStructuredRequest:
     query: str
     user: User
     document_types: list[DocumentType] | None = None
+    document_ids: list[int] | None = None
     top_k: int | None = None
     score_threshold: float | None = None
     recruiter_job_id: int | None = None
@@ -53,6 +54,7 @@ def generate_recruiter_fit_summary(request: RecruiterStructuredRequest):
             role=UserRole.RECRUITER,
             prompt_type=GroundedPromptType.RECRUITER_FIT_SUMMARY,
             document_types=request.document_types,
+            document_ids=request.document_ids,
             top_k=request.top_k,
             score_threshold=request.score_threshold,
             recruiter_job_id=request.recruiter_job_id,
@@ -96,6 +98,7 @@ def generate_recruiter_interview_pack(request: RecruiterStructuredRequest):
             role=UserRole.RECRUITER,
             prompt_type=GroundedPromptType.RECRUITER_INTERVIEW_PACK,
             document_types=request.document_types,
+            document_ids=request.document_ids,
             top_k=request.top_k,
             score_threshold=request.score_threshold,
             recruiter_job_id=request.recruiter_job_id,

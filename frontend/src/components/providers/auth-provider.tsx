@@ -31,10 +31,9 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [storedSession] = useState(() => readStoredSession());
-  const [status, setStatus] = useState<AuthStatus>(storedSession ? "loading" : "guest");
-  const [user, setUser] = useState<CurrentUser | null>(storedSession?.user ?? null);
-  const [accessToken, setAccessToken] = useState<string | null>(storedSession?.accessToken ?? null);
+  const [status, setStatus] = useState<AuthStatus>("loading");
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   async function hydrateSession(token: string) {
     const currentUser = await fetchCurrentUser(token);
@@ -46,19 +45,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (!storedSession) {
-      return;
-    }
+    const storedSession = readStoredSession();
 
-    void Promise.resolve().then(() =>
-      hydrateSession(storedSession.accessToken).catch(() => {
+    void Promise.resolve().then(() => {
+      if (!storedSession) {
+        setStatus("guest");
+        return;
+      }
+
+      setUser(storedSession.user);
+      setAccessToken(storedSession.accessToken);
+
+      return hydrateSession(storedSession.accessToken).catch(() => {
         clearStoredSession();
         setAccessToken(null);
         setUser(null);
         setStatus("guest");
-      }),
-    );
-  }, [storedSession]);
+      });
+    });
+  }, []);
 
   async function signIn(payload: LoginPayload) {
     const auth = await loginUser(payload);

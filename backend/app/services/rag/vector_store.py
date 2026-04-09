@@ -59,6 +59,7 @@ def build_chroma_metadata(chunk: Chunk) -> dict[str, str | int | float | bool]:
 def build_metadata_filter(
     *,
     document_id: int | None = None,
+    document_ids: list[int] | None = None,
     owner_user_id: int | None = None,
     document_type: str | None = None,
     owner_role: str | None = None,
@@ -68,6 +69,12 @@ def build_metadata_filter(
     conditions: list[dict[str, object]] = []
     if document_id is not None:
         conditions.append({"document_id": document_id})
+    if document_ids:
+        unique_document_ids = sorted({int(item) for item in document_ids})
+        if len(unique_document_ids) == 1:
+            conditions.append({"document_id": unique_document_ids[0]})
+        else:
+            conditions.append({"$or": [{"document_id": item} for item in unique_document_ids]})
     if owner_user_id is not None:
         conditions.append({"owner_user_id": owner_user_id})
     if document_type is not None:

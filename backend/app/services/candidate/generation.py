@@ -95,6 +95,7 @@ class CandidateStructuredRequest:
     query: str
     user: User
     document_types: list[DocumentType] | None = None
+    document_ids: list[int] | None = None
     top_k: int | None = None
     score_threshold: float | None = None
     model_override: str | None = None
@@ -111,6 +112,7 @@ def generate_candidate_interview_questions(request: CandidateStructuredRequest):
             role=UserRole.CANDIDATE,
             prompt_type=GroundedPromptType.CANDIDATE_INTERVIEW_QUESTIONS,
             document_types=request.document_types,
+            document_ids=request.document_ids,
             top_k=request.top_k,
             score_threshold=request.score_threshold,
             model_override=request.model_override,
@@ -143,6 +145,7 @@ def generate_candidate_answer_guidance(request: CandidateStructuredRequest):
             role=UserRole.CANDIDATE,
             prompt_type=GroundedPromptType.CANDIDATE_ANSWER_GUIDANCE,
             document_types=request.document_types,
+            document_ids=request.document_ids,
             top_k=request.top_k,
             score_threshold=request.score_threshold,
             model_override=request.model_override,
@@ -177,6 +180,7 @@ def generate_candidate_star_answer(request: CandidateStructuredRequest):
             role=UserRole.CANDIDATE,
             prompt_type=GroundedPromptType.STAR_ANSWER,
             document_types=request.document_types,
+            document_ids=request.document_ids,
             top_k=request.top_k,
             score_threshold=request.score_threshold,
             model_override=request.model_override,
@@ -214,6 +218,7 @@ def generate_candidate_skill_gap_analysis(request: CandidateStructuredRequest):
             role=UserRole.CANDIDATE,
             prompt_type=GroundedPromptType.SKILL_GAP_ANALYSIS,
             document_types=request.document_types,
+            document_ids=request.document_ids,
             top_k=request.top_k,
             score_threshold=request.score_threshold,
             model_override=request.model_override,
@@ -338,7 +343,7 @@ def build_talking_points(*, evidence: list[EvidenceChunkResponse]) -> list[str]:
     if not evidence:
         return ["Call out the missing evidence and add a concrete project example before using this answer."]
     return [
-        f"Use {item.source_label} to highlight {summarize_text(item.content, limit=110)}."
+        f"Use {item.source_label} to highlight {extract_display_sentence(item.content, limit=260)}."
         for item in evidence[:3]
     ]
 
@@ -363,7 +368,7 @@ def build_follow_up_questions(*, query: str, evidence: list[EvidenceChunkRespons
         ]
 
     follow_ups = [
-        f"What measurable result came from {summarize_text(evidence[0].content, limit=70).lower()}?",
+        f"What measurable result came from {extract_display_sentence(evidence[0].content, limit=200).lower()}?",
         f"Which tools or decisions mattered most when delivering {query}?",
     ]
     if len(evidence) > 1:
@@ -452,29 +457,36 @@ def build_star_section(
 
 
 def build_situation_content(item: EvidenceChunkResponse) -> str:
-    summary = summarize_text(item.content, limit=140)
+    summary = normalize_star_fragment(extract_display_sentence(item.content, limit=280))
     if item.document_type == DocumentType.JOB_DESCRIPTION:
-        return f"The target context is a role that expects {summary.lower()}."
-    return f"The example comes from work where I {summary.lower()}."
+        return f"The target context is a role that expects: {summary}."
+    return f"The example context is: {summary}."
 
 
 def build_task_content(*, query: str, item: EvidenceChunkResponse) -> str:
-    summary = summarize_text(item.content, limit=140)
+    summary = normalize_star_fragment(extract_display_sentence(item.content, limit=280))
     if item.document_type == DocumentType.JOB_DESCRIPTION:
-        return f"My task was to show that I could meet the role need around {summary.lower()}."
-    return f"My responsibility was to deliver {summary.lower()} in a way that answers {query}."
+        return f"My task was to show clear alignment to this role requirement: {summary}."
+    return f"My responsibility was to deliver: {summary}. This directly supports: {query}."
 
 
 def build_action_content(item: EvidenceChunkResponse) -> str:
-    summary = summarize_text(item.content, limit=150)
-    return f"I took action by {summary.lower()}."
+    summary = normalize_star_fragment(extract_display_sentence(item.content, limit=300))
+    return f"I took action by: {summary}."
 
 
 def build_result_content(item: EvidenceChunkResponse) -> str:
-    summary = summarize_text(item.content, limit=150)
+    summary = normalize_star_fragment(extract_display_sentence(item.content, limit=300))
     if contains_metric(summary):
-        return f"The result was {summary.lower()}."
-    return f"The result was tied to {summary.lower()}, but the final answer should add a clearer metric or outcome."
+        return f"The result was: {summary}."
+    return f"The result was: {summary}."
+
+
+def normalize_star_fragment(text: str) -> str:
+    normalized = " ".join(text.split())
+    normalized = re.sub(r"\s*[•▪◦·]+\s*", "; ", normalized)
+    normalized = re.sub(r";\s*;\s*", "; ", normalized)
+    return normalized.strip(" ;,")
 
 
 def build_star_missing_signals(*, evidence: list[EvidenceChunkResponse]) -> list[str]:

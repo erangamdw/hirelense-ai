@@ -32,7 +32,9 @@ export function FileUploadCard({
           </div>
           <div>
             <p className="font-medium text-[var(--color-ink)]">Choose a file</p>
-            <p className="mt-1 text-sm text-[var(--color-ink-muted)]">This foundation component is ready for the upload APIs in the next UI slice.</p>
+            <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+              Upload a document to use it in grounded analysis, interview prep, or recruiter review.
+            </p>
           </div>
         </label>
         <input

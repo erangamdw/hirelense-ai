@@ -87,11 +87,19 @@ class RecruiterComparisonConcernResponse(BaseModel):
     evidence_chunk_ids: list[int] = Field(default_factory=list)
 
 
+class RecruiterComparisonDimensionResponse(BaseModel):
+    title: str
+    score: int
+    summary: str
+
+
 class RecruiterCandidateComparisonItemResponse(BaseModel):
     candidate_id: int
     full_name: str
     current_title: str | None
     notes: str | None
+    rank_position: int
+    overall_match_score: int
     shortlist_status: RecruiterCandidateStatus
     document_count: int
     report_count: int
@@ -100,6 +108,10 @@ class RecruiterCandidateComparisonItemResponse(BaseModel):
     latest_fit_summary_created_at: datetime | None
     fit_summary_summary: str | None
     fit_summary_recommendation: str | None
+    skill_match: RecruiterComparisonDimensionResponse
+    tech_stack_match: RecruiterComparisonDimensionResponse
+    qualification_match: RecruiterComparisonDimensionResponse
+    experience_match: RecruiterComparisonDimensionResponse
     strengths: list[RecruiterComparisonStrengthResponse] = Field(default_factory=list)
     concerns: list[RecruiterComparisonConcernResponse] = Field(default_factory=list)
     missing_evidence_areas: list[str] = Field(default_factory=list)
@@ -111,4 +123,5 @@ class RecruiterCandidateComparisonResponse(BaseModel):
     title: str
     description: str
     candidate_count: int
+    ranking_basis: str
     candidates: list[RecruiterCandidateComparisonItemResponse] = Field(default_factory=list)

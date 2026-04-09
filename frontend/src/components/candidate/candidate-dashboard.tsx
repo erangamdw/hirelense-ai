@@ -65,7 +65,7 @@ export function CandidateDashboard() {
     return (
       <EmptyState
         title="Sign in to open the candidate workspace"
-        message="The candidate workflow now uses live profile, document, and report APIs."
+        message="Open your candidate workspace to manage documents, run interview prep, and review saved reports."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -76,7 +76,7 @@ export function CandidateDashboard() {
     return (
       <ErrorState
         title="Candidate dashboard unavailable"
-        message="This route expects a candidate account. Recruiters should use the recruiter workspace."
+        message="This page is only available to candidate accounts. Recruiters should use the recruiter workspace."
         actionHref="/recruiter"
         actionLabel="Open recruiter view"
       />
@@ -88,7 +88,7 @@ export function CandidateDashboard() {
   }
 
   if (!data) {
-    return <EmptyState title="No dashboard data yet" message="The API did not return candidate dashboard content." />;
+    return <EmptyState title="No dashboard data yet" message="Your candidate summary is not available yet. Try refreshing the page." />;
   }
 
   return (
@@ -97,17 +97,17 @@ export function CandidateDashboard() {
         <DashboardCard
           label="Documents"
           value={data.summary.uploaded_document_count}
-          hint="Live document count from the candidate dashboard summary."
+          hint="Documents available for preparation and grounded generation."
         />
         <DashboardCard
           label="Reports"
           value={data.summary.saved_report_count}
-          hint="Saved candidate outputs now load from the persisted reports API."
+          hint="Saved interview-prep outputs you can review later."
         />
         <DashboardCard
           label="Profile"
           value={data.summary.has_profile ? "Ready" : "Missing"}
-          hint="Candidate profile state comes from the live profile-backed summary endpoint."
+          hint="Keep your profile current so generated outputs match your target roles."
         />
       </div>
 
@@ -115,7 +115,7 @@ export function CandidateDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Recent documents</CardTitle>
-            <CardDescription>Uploads and pasted job descriptions are processed through the backend intake pipeline.</CardDescription>
+            <CardDescription>Use these documents as the evidence base for interview questions, answer guidance, and skills analysis.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {data.documents.length ? (
@@ -152,7 +152,7 @@ export function CandidateDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Quick actions</CardTitle>
-            <CardDescription>Use the candidate workspace pages rather than placeholder shell sections.</CardDescription>
+            <CardDescription>Move through the core preparation flow from profile setup to saved reports.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Link className="block rounded-2xl bg-white px-4 py-3 text-[var(--color-ink)] ring-1 ring-[var(--color-border)]" href="/candidate/profile">
@@ -192,7 +192,7 @@ export function CandidateDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Recent reports</CardTitle>
-            <CardDescription>Report history comes from `/reports`, with filterable detail pages in the candidate shell.</CardDescription>
+            <CardDescription>Return to previous interview-prep outputs and continue refining your answers.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {data.reports.length ? (
@@ -205,9 +205,13 @@ export function CandidateDashboard() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-medium text-[var(--color-ink)]">{report.title}</p>
-                      <p className="mt-1 text-sm text-[var(--color-ink-muted)]">{formatDateTime(report.created_at)}</p>
+                      <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+                        {formatDateTime(report.created_at)} · {formatLabel(report.report_type)}
+                      </p>
                     </div>
-                    <Badge>{formatLabel(report.report_type)}</Badge>
+                    <span className="rounded-full bg-[var(--color-ink)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-paper)]">
+                      View
+                    </span>
                   </div>
                 </Link>
               ))

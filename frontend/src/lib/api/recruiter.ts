@@ -88,6 +88,13 @@ export function updateRecruiterJob(accessToken: string, jobId: number, payload: 
   });
 }
 
+export function deleteRecruiterJob(accessToken: string, jobId: number) {
+  return apiFetch<{ job_id: number; status: string }>(`/recruiter/jobs/${jobId}`, {
+    method: "DELETE",
+    accessToken,
+  });
+}
+
 export function fetchRecruiterJobDetail(accessToken: string, jobId: number) {
   return apiFetch<RecruiterJobDetail>(`/recruiter/jobs/${jobId}`, {
     method: "GET",

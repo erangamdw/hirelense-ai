@@ -43,6 +43,7 @@ from app.services.recruiter import (
     create_recruiter_candidate,
     create_recruiter_job,
     create_recruiter_profile,
+    delete_recruiter_job,
     get_recruiter_candidate,
     get_recruiter_job,
     get_recruiter_profile,
@@ -187,6 +188,27 @@ def update_job(
         **build_recruiter_job_list_item(hydrated_job).model_dump(),
         candidates=[build_recruiter_candidate_response(candidate) for candidate in hydrated_job.candidates],
     )
+
+
+@router.delete("/jobs/{job_id}", status_code=status.HTTP_200_OK)
+def delete_job(
+    job_id: int,
+    current_user: User = Depends(get_current_recruiter),
+    db: Session = Depends(get_db_session),
+) -> dict[str, object]:
+    try:
+        delete_recruiter_job(
+            db,
+            recruiter=current_user,
+            job_id=job_id,
+        )
+    except RecruiterJobNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    return {"job_id": job_id, "status": "deleted"}
 
 
 @router.get("/jobs/{job_id}/review", response_model=RecruiterJobReviewResponse)

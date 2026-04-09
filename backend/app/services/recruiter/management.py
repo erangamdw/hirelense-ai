@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from sqlalchemy import Select, select
+from pathlib import Path
+
+from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.document import DocumentType
+from app.models.report import SavedReport
 from app.models.recruiter import RecruiterCandidate, RecruiterCandidateStatus, RecruiterJob
 from app.models.user import User
 from app.schemas.recruiter import (
@@ -12,6 +15,7 @@ from app.schemas.recruiter import (
     RecruiterJobCreate,
     RecruiterJobUpdate,
 )
+from app.services.rag import ChromaVectorStoreError, delete_document_vectors
 
 JOB_UPLOAD_DOCUMENT_TYPES = {
     DocumentType.JOB_DESCRIPTION,
@@ -85,6 +89,59 @@ def update_recruiter_job(
     db.commit()
     db.refresh(job)
     return job
+
+
+def delete_recruiter_job(
+    db: Session,
+    *,
+    recruiter: User,
+    job_id: int,
+) -> None:
+    job = get_recruiter_job(
+        db,
+        recruiter=recruiter,
+        job_id=job_id,
+    )
+
+    candidate_ids = [candidate.id for candidate in job.candidates]
+    scoped_documents = list(job.documents)
+    report_scope_filters = [SavedReport.recruiter_job_id == job.id]
+    if candidate_ids:
+        report_scope_filters.append(SavedReport.recruiter_candidate_id.in_(candidate_ids))
+
+    scoped_reports = list(
+        db.execute(
+            select(SavedReport).where(
+                SavedReport.owner_user_id == recruiter.id,
+                or_(*report_scope_filters),
+            )
+        ).scalars()
+    )
+
+    storage_paths = [Path(document.storage_path) for document in scoped_documents]
+
+    for document in scoped_documents:
+        try:
+            delete_document_vectors(document_id=document.id, owner_user_id=document.owner_user_id)
+        except ChromaVectorStoreError:
+            pass
+        db.delete(document)
+
+    for report in scoped_reports:
+        db.delete(report)
+
+    for candidate in job.candidates:
+        db.delete(candidate)
+
+    db.delete(job)
+    db.commit()
+
+    for storage_path in storage_paths:
+        try:
+            if storage_path.exists():
+                storage_path.unlink()
+        except OSError:
+            pass
 
 
 def get_recruiter_job(db: Session, *, recruiter: User, job_id: int) -> RecruiterJob:

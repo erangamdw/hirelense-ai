@@ -9,7 +9,7 @@ export default function RecruiterLayout({
     <AppShell
       role="recruiter"
       title="Recruiter workspace"
-      subtitle="Live recruiter workflow for dashboard summary, job management, candidate intake, scoped uploads, and review summaries."
+      subtitle="Manage jobs, review candidates, upload evidence, and save hiring outputs across each role you are hiring for."
     >
       {children}
     </AppShell>

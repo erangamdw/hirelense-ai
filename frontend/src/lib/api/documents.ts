@@ -68,3 +68,10 @@ export function reindexDocument(accessToken: string, documentId: number) {
     },
   );
 }
+
+export function deleteDocument(accessToken: string, documentId: number) {
+  return apiFetch<{ document_id: number; status: string }>(`/documents/${documentId}`, {
+    method: "DELETE",
+    accessToken,
+  });
+}

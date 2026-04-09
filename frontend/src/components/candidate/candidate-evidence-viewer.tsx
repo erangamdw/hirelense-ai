@@ -1,23 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
+import { getEvidenceMetaLine, getEvidenceRetrievalNote, getEvidenceSourceTitle } from "@/components/shared/evidence-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { EvidenceChunk } from "@/lib/api/types";
 import { formatLabel } from "@/lib/utils";
-
-function buildEvidenceMeta(item: EvidenceChunk) {
-  return [
-    item.source_label,
-    formatLabel(item.document_type),
-    item.section_title,
-    item.page_number ? `Page ${item.page_number}` : null,
-    item.score_note,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
 
 type CandidateEvidenceViewerProps = {
   evidence: EvidenceChunk[];
@@ -65,16 +55,20 @@ export function CandidateEvidenceViewer({
     return null;
   }
 
-  return (
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
     <div className="fixed inset-0 z-50">
       <button
         type="button"
         aria-label="Close evidence viewer"
-        className="absolute inset-0 bg-[rgba(14,18,32,0.62)]"
+        className="absolute inset-0 bg-[rgba(14,18,32,0.68)]"
         onClick={onClose}
       />
 
-      <div className="relative flex min-h-full items-end justify-center p-3 sm:items-center sm:p-6">
+      <div className="relative z-[120] flex min-h-full items-center justify-center overflow-y-auto p-3 sm:p-6">
         <div
           role="dialog"
           aria-modal="true"
@@ -93,7 +87,7 @@ export function CandidateEvidenceViewer({
                   <Badge>{`Chunk ${activeEvidence.chunk_index + 1}`}</Badge>
                 </div>
                 <h2 id="candidate-evidence-viewer-title" className="text-xl font-semibold text-[var(--color-ink)]">
-                  {activeEvidence.source_label}
+                  {getEvidenceSourceTitle(activeEvidence)}
                 </h2>
                 <p className="max-w-3xl text-sm text-[var(--color-ink-muted)]">
                   Full source chunk with citation context for the current assistant result.
@@ -136,8 +130,10 @@ export function CandidateEvidenceViewer({
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-soft)]">
                     Source
                   </p>
-                  <p className="mt-2 font-medium text-[var(--color-ink)]">{activeEvidence.source_label}</p>
-                  <p className="mt-1 leading-6">{buildEvidenceMeta(activeEvidence)}</p>
+                  <p className="mt-2 font-medium text-[var(--color-ink)]">{getEvidenceSourceTitle(activeEvidence)}</p>
+                  {getEvidenceMetaLine(activeEvidence) ? (
+                    <p className="mt-1 leading-6">{getEvidenceMetaLine(activeEvidence)}</p>
+                  ) : null}
                 </div>
 
                 <div>
@@ -151,12 +147,14 @@ export function CandidateEvidenceViewer({
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-soft)]">
-                    Retrieval note
-                  </p>
-                  <p className="mt-2 leading-6">{activeEvidence.score_note}</p>
-                </div>
+                {getEvidenceRetrievalNote(activeEvidence) ? (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink-soft)]">
+                      Retrieval note
+                    </p>
+                    <p className="mt-2 leading-6">{getEvidenceRetrievalNote(activeEvidence)}</p>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -173,6 +171,7 @@ export function CandidateEvidenceViewer({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

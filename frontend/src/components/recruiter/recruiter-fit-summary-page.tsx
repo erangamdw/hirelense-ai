@@ -1,6 +1,7 @@
 "use client";
 
 import { RecruiterCitationLinks, RecruiterGenerationWorkspace } from "@/components/recruiter/recruiter-generation-workspace";
+import { GeneratedRichText } from "@/components/shared/generated-rich-text";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateRecruiterFitSummary } from "@/lib/api/generation";
 import type { RecruiterFitSummaryResult } from "@/lib/api/types";
@@ -14,7 +15,9 @@ function FitSummaryResult({ result }: { result: RecruiterFitSummaryResult }) {
           <CardDescription>Recruiter-facing summary grounded in the scoped job and candidate evidence.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{result.summary}</p>
+          <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-panel)] px-5 py-5">
+            <GeneratedRichText text={result.summary} variant="framed" />
+          </div>
         </CardContent>
       </Card>
 
@@ -28,7 +31,9 @@ function FitSummaryResult({ result }: { result: RecruiterFitSummaryResult }) {
             {result.strengths.map((item) => (
               <div key={`${item.title}-${item.summary}`} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
                 <p className="font-medium text-[var(--color-ink)]">{item.title}</p>
-                <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{item.summary}</p>
+                <div className="mt-2">
+                  <GeneratedRichText text={item.summary} variant="plain" />
+                </div>
                 <div className="mt-3">
                   <RecruiterCitationLinks chunkIds={item.evidence_chunk_ids} />
                 </div>
@@ -46,7 +51,9 @@ function FitSummaryResult({ result }: { result: RecruiterFitSummaryResult }) {
             {result.concerns.map((item) => (
               <div key={`${item.title}-${item.summary}`} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
                 <p className="font-medium text-[var(--color-ink)]">{item.title}</p>
-                <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{item.summary}</p>
+                <div className="mt-2">
+                  <GeneratedRichText text={item.summary} variant="plain" />
+                </div>
                 <div className="mt-3">
                   <RecruiterCitationLinks chunkIds={item.evidence_chunk_ids} />
                 </div>
@@ -65,7 +72,7 @@ function FitSummaryResult({ result }: { result: RecruiterFitSummaryResult }) {
           <CardContent className="space-y-3">
             {result.missing_evidence_areas.map((item) => (
               <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-                <p className="text-sm text-[var(--color-ink-muted)]">{item}</p>
+                <GeneratedRichText text={item} variant="plain" />
               </div>
             ))}
           </CardContent>
@@ -75,11 +82,11 @@ function FitSummaryResult({ result }: { result: RecruiterFitSummaryResult }) {
           <CardHeader>
             <CardTitle>Recommendation</CardTitle>
             <CardDescription>Suggested interview direction based on strengths and missing signals.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{result.recommendation}</p>
-          </CardContent>
-        </Card>
+        </CardHeader>
+        <CardContent>
+          <GeneratedRichText text={result.recommendation} variant="framed" />
+        </CardContent>
+      </Card>
       </div>
     </div>
   );
@@ -96,7 +103,7 @@ export function RecruiterFitSummaryPage({
     <RecruiterGenerationWorkspace
       jobId={jobId}
       candidateId={candidateId}
-      title="Candidate analysis page"
+      title="Fit summary"
       description="Generate a recruiter-facing fit summary with strengths, concerns, missing signals, and a grounded recommendation."
       promptLabel="Fit summary target"
       promptPlaceholder="Describe the role-fit angle or screening question you want the summary to focus on."

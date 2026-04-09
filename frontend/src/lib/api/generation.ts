@@ -14,6 +14,7 @@ function buildCandidateGenerationBody(payload: CandidateGenerationPayload) {
   return {
     query: payload.query,
     document_types: payload.documentTypes,
+    document_ids: payload.documentIds,
     top_k: payload.topK,
     score_threshold: payload.scoreThreshold,
     model_override: payload.modelOverride,

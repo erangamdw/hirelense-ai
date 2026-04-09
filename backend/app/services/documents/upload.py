@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.document import Document, DocumentType
 from app.models.user import User
+from app.services.documents.parsing import get_owned_document
+from app.services.rag import ChromaVectorStoreError, delete_document_vectors
 
 ALLOWED_EXTENSIONS_BY_TYPE: dict[DocumentType, set[str]] = {
     DocumentType.CV: {".pdf"},
@@ -188,3 +190,24 @@ def list_documents_for_user(
         .limit(limit)
     )
     return list(db.execute(statement).scalars().all())
+
+
+def delete_document_for_user(db: Session, *, user: User, document_id: int) -> None:
+    document = get_owned_document(db, user=user, document_id=document_id)
+    storage_path = Path(document.storage_path)
+
+    try:
+        delete_document_vectors(document_id=document.id, owner_user_id=document.owner_user_id)
+    except ChromaVectorStoreError:
+        # Do not block deletion if vector cleanup fails; removing the document record
+        # is the higher-priority action and stale vectors can be re-cleaned later.
+        pass
+
+    db.delete(document)
+    db.commit()
+
+    try:
+        if storage_path.exists():
+            storage_path.unlink()
+    except OSError:
+        pass

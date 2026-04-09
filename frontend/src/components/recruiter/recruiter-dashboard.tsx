@@ -9,7 +9,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { EvidencePanel } from "@/components/shared/evidence-panel";
 import { LoadingGrid } from "@/components/shared/loading-grid";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   fetchRecruiterDashboard,
@@ -17,6 +16,7 @@ import {
   fetchRecruiterJobs,
 } from "@/lib/api/recruiter";
 import type { RecruiterDashboardSummary, RecruiterJobDetail } from "@/lib/api/types";
+import { formatLabel } from "@/lib/utils";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -81,7 +81,7 @@ export function RecruiterDashboard() {
     return (
       <EmptyState
         title="Sign in to open the recruiter dashboard"
-        message="The recruiter shell already uses the real recruiter summary endpoint."
+        message="Open the recruiter workspace to manage jobs, candidates, and evidence-backed review workflows."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -92,7 +92,7 @@ export function RecruiterDashboard() {
     return (
       <ErrorState
         title="Recruiter dashboard unavailable"
-        message="This route expects a recruiter account. Candidates should use the candidate dashboard shell."
+        message="This page is only available to recruiter accounts. Candidates should use the candidate workspace."
         actionHref="/candidate"
         actionLabel="Open candidate view"
       />
@@ -104,20 +104,20 @@ export function RecruiterDashboard() {
   }
 
   if (!summary) {
-    return <EmptyState title="No recruiter summary yet" message="The API did not return dashboard content." />;
+    return <EmptyState title="No recruiter summary yet" message="Your recruiter dashboard summary is not available yet. Try refreshing the page." />;
   }
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-4">
-        <DashboardCard label="Jobs" value={summary.jobs_count} hint="Directly from /recruiter/dashboard." />
-        <DashboardCard label="Candidates" value={summary.candidate_count} hint="Tracked recruiter-side candidate intake count." />
+        <DashboardCard label="Jobs" value={summary.jobs_count} hint="Open roles currently tracked in your workspace." />
+        <DashboardCard label="Candidates" value={summary.candidate_count} hint="Candidates added across your active hiring scopes." />
         <DashboardCard
           label="Documents"
           value={summary.candidate_document_count}
-          hint="Candidate document volume available for review flows."
+          hint="Recruiter-side evidence uploaded for screening and interview prep."
         />
-        <DashboardCard label="Reports" value={summary.report_count} hint="Saved recruiter outputs are now persisted." />
+        <DashboardCard label="Reports" value={summary.report_count} hint="Saved fit summaries and interview packs." />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.25fr_1fr]">
@@ -131,20 +131,24 @@ export function RecruiterDashboard() {
                 <Link
                   key={report.id}
                   href={`/recruiter/reports/${report.id}`}
-                  className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4"
+                  className="block rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-medium text-[var(--color-ink)]">{report.title}</p>
-                      <p className="mt-1 text-sm text-[var(--color-ink-muted)]">{formatDate(report.created_at)}</p>
+                      <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+                        {formatDate(report.created_at)} · {formatLabel(report.report_type)}
+                      </p>
                     </div>
-                    <Badge>{report.report_type}</Badge>
+                    <span className="rounded-full bg-[var(--color-ink)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-paper)]">
+                      View
+                    </span>
                   </div>
                 </Link>
               ))
             ) : (
               <p className="text-sm text-[var(--color-ink-muted)]">
-                No saved recruiter reports yet. The save/list/detail backend is ready for the next UI slice.
+                No recruiter reports yet. Generate a fit summary or interview pack to start building review history.
               </p>
             )}
           </CardContent>
@@ -153,12 +157,12 @@ export function RecruiterDashboard() {
         <EvidencePanel
           items={[
             {
-              label: "Review pages",
-              detail: "Backend job-review and candidate-review aggregates are ready for the next recruiter UI milestone.",
+              label: "Review workflow",
+              detail: "Create a job, upload candidate evidence, and move from job detail into fit summaries, interview packs, and comparison.",
             },
             {
-              label: "Scope",
-              detail: "Recruiter retrieval and saved reports already support recruiter job and recruiter candidate filters.",
+              label: "Scoped evidence",
+              detail: "Each report stays tied to the correct job and candidate so recruiter review does not mix signals across roles.",
             },
           ]}
         />
@@ -184,7 +188,7 @@ export function RecruiterDashboard() {
               ))
             ) : (
               <p className="text-sm text-[var(--color-ink-muted)]">
-                Candidate analysis links will appear here as recruiter intake grows.
+                Candidate analysis links will appear here after you add candidates to a job.
               </p>
             )}
           </CardContent>
@@ -205,7 +209,7 @@ export function RecruiterDashboard() {
               Open recruiter reports
             </Link>
             <p className="text-[var(--color-ink-muted)]">
-              Setup, jobs, candidate analyses, recruiter-scoped uploads, and report detail views now sit on the existing backend contracts.
+              Use setup for company details, jobs for hiring scopes, and reports for saved recruiter decisions.
             </p>
           </CardContent>
         </Card>

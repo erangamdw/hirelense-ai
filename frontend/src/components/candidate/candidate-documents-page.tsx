@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   chunkDocument,
   createTextDocument,
+  deleteDocument,
   fetchDocuments,
   parseDocument,
   reindexDocument,
@@ -52,6 +53,7 @@ export function CandidateDocumentsPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeUpload, setActiveUpload] = useState<UploadKind | null>(null);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
   const [supportingType, setSupportingType] = useState<Extract<DocumentType, "project_notes" | "interview_feedback">>("project_notes");
 
   async function loadDocuments(token: string) {
@@ -117,7 +119,7 @@ export function CandidateDocumentsPage() {
     return (
       <EmptyState
         title="Sign in to manage candidate documents"
-        message="The document intake page uploads files and pasted text into the live backend processing pipeline."
+        message="Upload the documents you want the assistant to use when generating interview-prep outputs."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -128,7 +130,7 @@ export function CandidateDocumentsPage() {
     return (
       <ErrorState
         title="Candidate documents unavailable"
-        message="This route expects a candidate account."
+        message="This page is only available to candidate accounts."
         actionHref="/recruiter"
         actionLabel="Open recruiter view"
       />
@@ -185,7 +187,7 @@ export function CandidateDocumentsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Job description input</CardTitle>
-            <CardDescription>Paste the target role description directly into the backend as a searchable document.</CardDescription>
+            <CardDescription>Paste a job description so the assistant can use it as searchable role context.</CardDescription>
           </CardHeader>
           <CardContent>
             <form
@@ -287,7 +289,7 @@ export function CandidateDocumentsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Uploaded documents</CardTitle>
-          <CardDescription>The list below is loaded from the live `/documents` endpoint.</CardDescription>
+          <CardDescription>These are the documents currently available for interview prep and grounded analysis.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {documents.length ? (
@@ -315,6 +317,34 @@ export function CandidateDocumentsPage() {
                 {document.indexing_error ? (
                   <p className="mt-3 text-sm text-[var(--color-danger)]">{document.indexing_error}</p>
                 ) : null}
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={deletingDocumentId === document.id}
+                    onClick={() => {
+                      if (!accessToken) {
+                        return;
+                      }
+
+                      setError(null);
+                      setFeedback(null);
+                      setDeletingDocumentId(document.id);
+
+                      void deleteDocument(accessToken, document.id)
+                        .then(async () => {
+                          await loadDocuments(accessToken);
+                          setFeedback(`Removed ${document.original_filename}.`);
+                        })
+                        .catch((caughtError) => {
+                          setError(caughtError instanceof Error ? caughtError.message : "Could not remove document.");
+                        })
+                        .finally(() => setDeletingDocumentId(null));
+                    }}
+                  >
+                    {deletingDocumentId === document.id ? "Removing..." : "Remove"}
+                  </Button>
+                </div>
               </div>
             ))
           ) : (

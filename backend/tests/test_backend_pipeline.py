@@ -257,6 +257,56 @@ def test_reindex_with_provider_failure_sets_failed_status(tmp_path: Path, monkey
             assert all(chunk.embedding_ref is None for chunk in chunks)
 
 
+def test_delete_document_removes_record_file_and_vectors(tmp_path: Path, monkeypatch) -> None:
+    with build_test_client(tmp_path, monkeypatch) as (client, session_factory):
+        token = register_and_login(client, email="candidate-delete@example.com")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        upload_response = client.post(
+            "/documents/upload",
+            headers=headers,
+            files={
+                "file": (
+                    "resume.pdf",
+                    BytesIO(
+                        create_pdf_bytes(
+                            title="Experience",
+                            body="Built FastAPI services, retrieval pipelines, and interview preparation tooling.",
+                        )
+                    ),
+                    "application/pdf",
+                )
+            },
+            data={"document_type": "cv"},
+        )
+        assert upload_response.status_code == 201
+        document_id = upload_response.json()["id"]
+        storage_path = Path(upload_response.json()["storage_path"])
+
+        assert client.post(f"/documents/{document_id}/parse", headers=headers).status_code == 200
+        assert client.post(f"/documents/{document_id}/chunk", headers=headers).status_code == 200
+        assert client.post(f"/documents/{document_id}/reindex", headers=headers).status_code == 200
+
+        collection = get_document_collection()
+        stored_vectors_before_delete = collection.get(where=build_metadata_filter(document_id=document_id))
+        assert stored_vectors_before_delete["ids"]
+        assert storage_path.exists()
+
+        delete_response = client.delete(f"/documents/{document_id}", headers=headers)
+        assert delete_response.status_code == 200
+        assert delete_response.json() == {"document_id": document_id, "status": "deleted"}
+
+        with session_factory() as session:
+            document = session.execute(select(Document).where(Document.id == document_id)).scalar_one_or_none()
+            chunks = session.execute(select(Chunk).where(Chunk.document_id == document_id)).scalars().all()
+            assert document is None
+            assert chunks == []
+
+        stored_vectors_after_delete = collection.get(where=build_metadata_filter(document_id=document_id))
+        assert stored_vectors_after_delete["ids"] == []
+        assert not storage_path.exists()
+
+
 def test_role_aware_retrieval_endpoints_return_filtered_evidence(tmp_path: Path, monkeypatch) -> None:
     with build_test_client(tmp_path, monkeypatch) as (client, _session_factory):
         candidate_token = register_and_login(client, email="candidate-retrieval@example.com", role="candidate")
@@ -355,6 +405,62 @@ def test_role_aware_retrieval_endpoints_return_filtered_evidence(tmp_path: Path,
             json={"query": "should fail"},
         )
         assert recruiter_forbidden.status_code == 403
+
+
+def test_candidate_generation_can_scope_to_selected_document_ids(tmp_path: Path, monkeypatch) -> None:
+    with build_test_client(tmp_path, monkeypatch) as (client, _session_factory):
+        candidate_token = register_and_login(client, email="candidate-scope@example.com", role="candidate")
+        candidate_headers = {"Authorization": f"Bearer {candidate_token}"}
+
+        selected_job_description = client.post(
+            "/documents/text",
+            headers=candidate_headers,
+            json={
+                "document_type": "job_description",
+                "title": "backend-platform-jd",
+                "content": (
+                    "Senior backend engineer role focused on FastAPI, PostgreSQL, REST APIs, and platform reliability."
+                ),
+            },
+        )
+        assert selected_job_description.status_code == 201
+        selected_job_description_id = selected_job_description.json()["id"]
+
+        unselected_job_description = client.post(
+            "/documents/text",
+            headers=candidate_headers,
+            json={
+                "document_type": "job_description",
+                "title": "frontend-design-jd",
+                "content": "Frontend design role focused on Figma systems, motion design, and visual storytelling.",
+            },
+        )
+        assert unselected_job_description.status_code == 201
+        unselected_job_description_id = unselected_job_description.json()["id"]
+
+        for document_id in [selected_job_description_id, unselected_job_description_id]:
+            assert client.post(f"/documents/{document_id}/parse", headers=candidate_headers).status_code == 200
+            assert client.post(f"/documents/{document_id}/chunk", headers=candidate_headers).status_code == 200
+            assert client.post(f"/documents/{document_id}/reindex", headers=candidate_headers).status_code == 200
+
+        candidate_questions = client.post(
+            "/rag/candidate/interview-questions",
+            headers=candidate_headers,
+            json={
+                "query": "What interview questions should I expect for a FastAPI backend platform role?",
+                "document_types": ["job_description"],
+                "document_ids": [selected_job_description_id],
+                "top_k": 5,
+                "score_threshold": 0.0,
+            },
+        )
+        assert candidate_questions.status_code == 200
+        candidate_questions_json = candidate_questions.json()
+        assert candidate_questions_json["evidence_count"] >= 1
+        assert {item["document_id"] for item in candidate_questions_json["evidence"]} == {selected_job_description_id}
+        assert all(
+            "frontend-design-jd" not in item["source_label"] for item in candidate_questions_json["evidence"]
+        )
 
 
 def test_grounded_generation_endpoints_return_answer_and_evidence(tmp_path: Path, monkeypatch) -> None:
@@ -1133,13 +1239,21 @@ def test_recruiter_candidate_comparison_endpoint_and_status_updates(tmp_path: Pa
         comparison_json = comparison_response.json()
         assert comparison_json["job_id"] == job_id
         assert comparison_json["candidate_count"] == 2
+        assert comparison_json["ranking_basis"]
         assert comparison_json["candidates"][0]["candidate_id"] == candidate_one_id
+        assert comparison_json["candidates"][0]["rank_position"] == 1
         assert comparison_json["candidates"][0]["latest_fit_summary_report_id"] == fit_summary_report_id
         assert comparison_json["candidates"][0]["fit_summary_summary"]
+        assert comparison_json["candidates"][0]["overall_match_score"] >= 0
+        assert comparison_json["candidates"][0]["skill_match"]["title"] == "Skill match"
+        assert comparison_json["candidates"][0]["tech_stack_match"]["title"] == "Tech stack match"
+        assert comparison_json["candidates"][0]["qualification_match"]["title"] == "Qualifications"
+        assert comparison_json["candidates"][0]["experience_match"]["title"] == "Experience"
         assert comparison_json["candidates"][0]["strengths"]
         assert comparison_json["candidates"][0]["concerns"]
         assert comparison_json["candidates"][0]["needs_fit_summary"] is False
         assert comparison_json["candidates"][1]["candidate_id"] == candidate_two_id
+        assert comparison_json["candidates"][1]["rank_position"] == 2
         assert comparison_json["candidates"][1]["needs_fit_summary"] is True
         assert comparison_json["candidates"][1]["shortlist_status"] == "under_review"
 
@@ -1160,6 +1274,96 @@ def test_recruiter_candidate_comparison_endpoint_and_status_updates(tmp_path: Pa
             if item["candidate_id"] == candidate_one_id
         )
         assert updated_candidate["shortlist_status"] == "shortlisted"
+
+
+def test_recruiter_job_delete_removes_scoped_candidates_documents_reports_and_vectors(tmp_path: Path, monkeypatch) -> None:
+    with build_test_client(tmp_path, monkeypatch) as (client, session_factory):
+        recruiter_token = register_and_login(client, email="recruiter-delete-job@example.com", role="recruiter")
+        recruiter_headers = {"Authorization": f"Bearer {recruiter_token}"}
+
+        create_job_response = client.post(
+            "/recruiter/jobs",
+            headers=recruiter_headers,
+            json={
+                "title": "Backend Platform Engineer",
+                "description": "Own platform APIs and retrieval reliability.",
+                "skills_required": ["FastAPI", "PostgreSQL"],
+            },
+        )
+        assert create_job_response.status_code == 201
+        job_id = create_job_response.json()["id"]
+
+        create_candidate_response = client.post(
+            f"/recruiter/jobs/{job_id}/candidates",
+            headers=recruiter_headers,
+            json={"full_name": "Taylor Delete", "current_title": "Platform Engineer"},
+        )
+        assert create_candidate_response.status_code == 201
+        candidate_id = create_candidate_response.json()["id"]
+
+        job_document_upload = client.post(
+            f"/recruiter/jobs/{job_id}/documents/upload",
+            headers=recruiter_headers,
+            files={"file": ("job.txt", BytesIO(b"Need FastAPI and PostgreSQL experience."), "text/plain")},
+            data={"document_type": "job_description"},
+        )
+        assert job_document_upload.status_code == 201
+        job_document_id = job_document_upload.json()["id"]
+        job_storage_path = Path(job_document_upload.json()["storage_path"])
+
+        candidate_document_upload = client.post(
+            f"/recruiter/jobs/{job_id}/candidates/{candidate_id}/documents/upload",
+            headers=recruiter_headers,
+            files={
+                "file": (
+                    "candidate.txt",
+                    BytesIO(b"Built FastAPI APIs and PostgreSQL-backed services for hiring systems."),
+                    "text/plain",
+                )
+            },
+            data={"document_type": "interview_feedback"},
+        )
+        assert candidate_document_upload.status_code == 201
+        candidate_document_id = candidate_document_upload.json()["id"]
+        candidate_storage_path = Path(candidate_document_upload.json()["storage_path"])
+
+        for document_id in [job_document_id, candidate_document_id]:
+            assert client.post(f"/documents/{document_id}/parse", headers=recruiter_headers).status_code == 200
+            assert client.post(f"/documents/{document_id}/chunk", headers=recruiter_headers).status_code == 200
+            assert client.post(f"/documents/{document_id}/reindex", headers=recruiter_headers).status_code == 200
+
+        report_response = client.post(
+            "/reports",
+            headers=recruiter_headers,
+            json={
+                "report_type": "recruiter_fit_summary",
+                "query": "Assess Taylor for the backend platform role.",
+                "recruiter_candidate_id": candidate_id,
+                "payload": {"summary": "Strong backend platform alignment."},
+            },
+        )
+        assert report_response.status_code == 201
+
+        collection = get_document_collection()
+        assert collection.get(where=build_metadata_filter(document_id=job_document_id))["ids"]
+        assert collection.get(where=build_metadata_filter(document_id=candidate_document_id))["ids"]
+        assert job_storage_path.exists()
+        assert candidate_storage_path.exists()
+
+        delete_response = client.delete(f"/recruiter/jobs/{job_id}", headers=recruiter_headers)
+        assert delete_response.status_code == 200
+        assert delete_response.json() == {"job_id": job_id, "status": "deleted"}
+
+        with session_factory() as session:
+            assert session.execute(select(Document).where(Document.id == job_document_id)).scalar_one_or_none() is None
+            assert session.execute(select(Document).where(Document.id == candidate_document_id)).scalar_one_or_none() is None
+            assert session.execute(select(Chunk).where(Chunk.document_id == job_document_id)).scalars().all() == []
+            assert session.execute(select(Chunk).where(Chunk.document_id == candidate_document_id)).scalars().all() == []
+
+        assert collection.get(where=build_metadata_filter(document_id=job_document_id))["ids"] == []
+        assert collection.get(where=build_metadata_filter(document_id=candidate_document_id))["ids"] == []
+        assert not job_storage_path.exists()
+        assert not candidate_storage_path.exists()
 
 
 def test_recruiter_job_update_endpoint_persists_changes(tmp_path: Path, monkeypatch) -> None:

@@ -82,7 +82,7 @@ export function RecruiterCandidatePage({
     return (
       <EmptyState
         title="Sign in to open recruiter candidate review"
-        message="Recruiter candidate pages are wired to live review and upload endpoints."
+        message="Open the recruiter workspace to review a candidate, upload evidence, and generate recruiter outputs."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -93,7 +93,7 @@ export function RecruiterCandidatePage({
     return (
       <ErrorState
         title="Recruiter candidate unavailable"
-        message="This route expects a recruiter account."
+        message="This page is only available to recruiter accounts."
         actionHref="/candidate"
         actionLabel="Open candidate view"
       />
@@ -105,7 +105,7 @@ export function RecruiterCandidatePage({
   }
 
   if (!data) {
-    return <EmptyState title="Candidate not found" message="The API did not return recruiter candidate content." actionHref={`/recruiter/jobs/${jobId}`} actionLabel="Back to job detail" />;
+    return <EmptyState title="Candidate not found" message="We could not load this candidate for the current job." actionHref={`/recruiter/jobs/${jobId}`} actionLabel="Back to job detail" />;
   }
 
   return (
@@ -134,7 +134,7 @@ export function RecruiterCandidatePage({
         <Card>
           <CardHeader>
             <CardTitle>Candidate review summary</CardTitle>
-            <CardDescription>Live recruiter candidate review data returned by the backend review endpoint.</CardDescription>
+            <CardDescription>Review the candidate summary, uploaded evidence, and current shortlist status for this role.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-[var(--color-ink-muted)]">
             <p>{data.review.current_title || "No current title saved."}</p>

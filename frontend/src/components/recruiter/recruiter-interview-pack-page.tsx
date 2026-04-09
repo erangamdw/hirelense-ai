@@ -1,6 +1,7 @@
 "use client";
 
 import { RecruiterCitationLinks, RecruiterGenerationWorkspace } from "@/components/recruiter/recruiter-generation-workspace";
+import { GeneratedRichText } from "@/components/shared/generated-rich-text";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateRecruiterInterviewPack } from "@/lib/api/generation";
 import type { RecruiterInterviewPackResult } from "@/lib/api/types";
@@ -18,25 +19,29 @@ function InterviewPackResult({ result }: { result: RecruiterInterviewPackResult 
       <Card>
         <CardHeader>
           <CardTitle>Interview pack overview</CardTitle>
-          <CardDescription>Recruiter-facing overview returned by the interview-pack endpoint.</CardDescription>
+          <CardDescription>A summary of the interview focus areas for this candidate and role.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{result.overview}</p>
+          <div className="rounded-[28px] border border-[var(--color-border)] bg-[var(--color-panel)] px-5 py-5">
+            <GeneratedRichText text={result.overview} variant="framed" />
+          </div>
         </CardContent>
       </Card>
 
       <div className="space-y-6">
         {Object.entries(groupedProbes).map(([category, probes]) => (
-          <Card key={category}>
-            <CardHeader>
-              <CardTitle>{formatLabel(category)}</CardTitle>
-              <CardDescription>Grouped interview questions and rationale for this evidence-backed area.</CardDescription>
-            </CardHeader>
+            <Card key={category}>
+              <CardHeader>
+                <CardTitle>{formatLabel(category)}</CardTitle>
+                <CardDescription>Interview prompts and rationale grouped by what you need to validate in this area.</CardDescription>
+              </CardHeader>
             <CardContent className="space-y-4">
               {probes.map((probe, index) => (
                 <div key={`${probe.prompt}-${index}`} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
                   <p className="font-medium text-[var(--color-ink)]">{probe.prompt}</p>
-                  <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{probe.rationale}</p>
+                  <div className="mt-2">
+                    <GeneratedRichText text={probe.rationale} variant="plain" />
+                  </div>
                   <div className="mt-3">
                     <RecruiterCitationLinks chunkIds={probe.evidence_chunk_ids} />
                   </div>
@@ -55,7 +60,7 @@ function InterviewPackResult({ result }: { result: RecruiterInterviewPackResult 
         <CardContent className="space-y-3">
           {result.follow_up_questions.map((question) => (
             <div key={question} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-              <p className="text-sm text-[var(--color-ink-muted)]">{question}</p>
+              <GeneratedRichText text={question} variant="plain" />
             </div>
           ))}
         </CardContent>
@@ -75,7 +80,7 @@ export function RecruiterInterviewPackPage({
     <RecruiterGenerationWorkspace
       jobId={jobId}
       candidateId={candidateId}
-      title="Interview pack page"
+      title="Interview pack"
       description="Generate grouped interview probes, rationale, follow-up questions, and evidence references for this candidate scope."
       promptLabel="Interview pack target"
       promptPlaceholder="Describe the role or focus area you want the interview pack to screen for."

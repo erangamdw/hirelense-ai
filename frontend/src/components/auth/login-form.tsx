@@ -19,7 +19,7 @@ export function LoginForm() {
     <Card className="w-full max-w-xl">
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
-        <CardDescription>Use the backend auth flow that already exists in FastAPI.</CardDescription>
+        <CardDescription>Access your candidate or recruiter workspace and continue where you left off.</CardDescription>
       </CardHeader>
       <CardContent>
         <form

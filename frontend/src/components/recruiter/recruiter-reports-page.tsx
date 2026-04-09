@@ -62,7 +62,7 @@ export function RecruiterReportsPage({
     return (
       <EmptyState
         title="Sign in to review recruiter reports"
-        message="The recruiter report history page loads persisted recruiter outputs from the backend reports API."
+        message="Review saved fit summaries and interview packs across your active hiring scopes."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -73,7 +73,7 @@ export function RecruiterReportsPage({
     return (
       <ErrorState
         title="Recruiter reports unavailable"
-        message="This route expects a recruiter account."
+        message="This page is only available to recruiter accounts."
         actionHref="/candidate"
         actionLabel="Open candidate view"
       />
@@ -88,7 +88,7 @@ export function RecruiterReportsPage({
     <Card>
       <CardHeader>
         <CardTitle>Recruiter reports</CardTitle>
-        <CardDescription>Filter persisted recruiter outputs and open detailed views backed by `/reports/:id`.</CardDescription>
+        <CardDescription>Filter saved recruiter outputs by type and scope so you can return to earlier hiring decisions.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">

@@ -64,6 +64,7 @@ class RetrievalRequest:
     user: User
     role: UserRole
     document_types: list[DocumentType] | None = None
+    document_ids: list[int] | None = None
     top_k: int | None = None
     score_threshold: float | None = None
     recruiter_job_id: int | None = None
@@ -111,6 +112,7 @@ class ChromaRetrieverService(RetrieverService):
         base_filter = build_metadata_filter(
             owner_user_id=request.user.id,
             owner_role=request.role.value,
+            document_ids=request.document_ids,
             recruiter_job_id=request.recruiter_job_id,
             recruiter_candidate_id=request.recruiter_candidate_id if request.recruiter_job_id is None else None,
         )
@@ -137,11 +139,15 @@ class ChromaRetrieverService(RetrieverService):
         evidence: list[EvidenceChunkResponse] = []
         seen_contents: set[str] = set()
         allowed_document_type_values = {document_type.value for document_type in document_types}
+        allowed_document_ids = set(request.document_ids or [])
 
         for content, metadata, distance in zip(documents, metadatas, distances):
             metadata = metadata or {}
             document_type_value = str(metadata.get("document_type", ""))
             if document_type_value not in allowed_document_type_values:
+                continue
+            metadata_document_id = int(metadata.get("document_id", 0))
+            if allowed_document_ids and metadata_document_id not in allowed_document_ids:
                 continue
             if not matches_recruiter_scope(metadata=metadata, request=request):
                 continue

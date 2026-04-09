@@ -9,7 +9,7 @@ export default function CandidateLayout({
     <AppShell
       role="candidate"
       title="Candidate workspace"
-      subtitle="Live candidate workflow for profile setup, document intake, grounded interview prep, and saved report history on top of the FastAPI backend."
+      subtitle="Build your profile, upload your documents, generate interview prep, and return to saved reports in one place."
     >
       {children}
     </AppShell>

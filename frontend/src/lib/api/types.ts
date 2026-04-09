@@ -117,6 +117,7 @@ export type EvidenceChunk = {
 export type CandidateGenerationPayload = {
   query: string;
   documentTypes?: DocumentType[];
+  documentIds?: number[];
   topK?: number;
   scoreThreshold?: number;
   modelOverride?: string;
@@ -362,11 +363,19 @@ export type RecruiterComparisonSignal = {
   evidence_chunk_ids: number[];
 };
 
+export type RecruiterComparisonDimension = {
+  title: string;
+  score: number;
+  summary: string;
+};
+
 export type RecruiterCandidateComparisonItem = {
   candidate_id: number;
   full_name: string;
   current_title: string | null;
   notes: string | null;
+  rank_position: number;
+  overall_match_score: number;
   shortlist_status: RecruiterCandidateShortlistStatus;
   document_count: number;
   report_count: number;
@@ -375,6 +384,10 @@ export type RecruiterCandidateComparisonItem = {
   latest_fit_summary_created_at: string | null;
   fit_summary_summary: string | null;
   fit_summary_recommendation: string | null;
+  skill_match: RecruiterComparisonDimension;
+  tech_stack_match: RecruiterComparisonDimension;
+  qualification_match: RecruiterComparisonDimension;
+  experience_match: RecruiterComparisonDimension;
   strengths: RecruiterComparisonSignal[];
   concerns: RecruiterComparisonSignal[];
   missing_evidence_areas: string[];
@@ -386,6 +399,7 @@ export type RecruiterCandidateComparison = {
   title: string;
   description: string;
   candidate_count: number;
+  ranking_basis: string;
   candidates: RecruiterCandidateComparisonItem[];
 };
 

@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import {
+  RecruiterCandidateCreateDialog,
+  type RecruiterCandidateFormState,
+} from "@/components/recruiter/recruiter-candidate-create-dialog";
 import { useAuth } from "@/components/providers/auth-provider";
+import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingGrid } from "@/components/shared/loading-grid";
@@ -11,11 +17,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   createRecruiterCandidate,
+  deleteRecruiterJob,
   fetchRecruiterJobDetail,
   fetchRecruiterJobReview,
+  uploadRecruiterCandidateDocument,
   uploadRecruiterJobDocument,
 } from "@/lib/api/recruiter";
 import type {
@@ -25,21 +32,14 @@ import type {
 } from "@/lib/api/types";
 import { formatDateTime, formatLabel } from "@/lib/utils";
 
-type CandidateFormState = {
-  full_name: string;
-  email: string;
-  current_title: string;
-  notes: string;
-};
-
-const emptyCandidateForm: CandidateFormState = {
+const emptyCandidateForm: RecruiterCandidateFormState = {
   full_name: "",
   email: "",
   current_title: "",
   notes: "",
 };
 
-function buildCandidatePayload(form: CandidateFormState): RecruiterCandidatePayload {
+function buildCandidatePayload(form: RecruiterCandidateFormState): RecruiterCandidatePayload {
   return {
     full_name: form.full_name.trim(),
     email: form.email.trim() || null,
@@ -54,6 +54,7 @@ type RecruiterJobState = {
 };
 
 export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
+  const router = useRouter();
   const { accessToken, status, user } = useAuth();
   const isRecruiterSession = status === "authenticated" && !!accessToken && user?.role === "recruiter";
   const [data, setData] = useState<RecruiterJobState | null>(null);
@@ -66,6 +67,9 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [isCreatingCandidate, setIsCreatingCandidate] = useState(false);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [isDeletingJob, setIsDeletingJob] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCandidateDialogOpen, setIsCandidateDialogOpen] = useState(false);
 
   async function refreshJob(token: string) {
     const [detail, review] = await Promise.all([
@@ -102,7 +106,7 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
     return (
       <EmptyState
         title="Sign in to open recruiter jobs"
-        message="Recruiter job detail pages are backed by the live recruiter management endpoints."
+        message="Open a recruiter account to manage job scope, candidate intake, and evidence-backed review."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -113,7 +117,7 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
     return (
       <ErrorState
         title="Recruiter job unavailable"
-        message="This route expects a recruiter account."
+        message="This page is only available to recruiter accounts."
         actionHref="/candidate"
         actionLabel="Open candidate view"
       />
@@ -125,7 +129,7 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
   }
 
   if (!data) {
-    return <EmptyState title="Job not found" message="The API did not return recruiter job content." actionHref="/recruiter/jobs" actionLabel="Back to jobs" />;
+    return <EmptyState title="Job not found" message="We could not load this job. It may have been removed or you may not have access to it." actionHref="/recruiter/jobs" actionLabel="Back to jobs" />;
   }
 
   return (
@@ -142,17 +146,108 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
           <Link className="text-sm font-semibold text-[var(--color-accent)]" href={`/recruiter/jobs/${jobId}/edit`}>
             Edit job
           </Link>
+          <button
+            type="button"
+            className="text-sm font-semibold text-[var(--color-danger)]"
+            disabled={isDeletingJob}
+            onClick={() => {
+              setIsDeleteDialogOpen(true);
+            }}
+          >
+            {isDeletingJob ? "Deleting..." : "Delete job"}
+          </button>
           <Link className="text-sm font-semibold text-[var(--color-accent)]" href="/recruiter/jobs">
             Back to jobs
           </Link>
         </div>
       </div>
 
+      <ConfirmationDialog
+        open={isDeleteDialogOpen}
+        eyebrow="Delete recruiter job"
+        title={`Delete ${data.detail.title}?`}
+        description="This removes the job, every candidate under it, recruiter-side documents, saved recruiter reports, and associated vectors. This action cannot be undone."
+        confirmLabel="Delete job"
+        isConfirming={isDeletingJob}
+        onClose={() => {
+          if (isDeletingJob) {
+            return;
+          }
+          setIsDeleteDialogOpen(false);
+        }}
+        onConfirm={() => {
+          if (!accessToken) {
+            return;
+          }
+
+          setIsDeletingJob(true);
+          void deleteRecruiterJob(accessToken, jobId)
+            .then(() => {
+              setIsDeleteDialogOpen(false);
+              router.push("/recruiter/jobs");
+            })
+            .catch((caughtError) => {
+              setLoadError(caughtError instanceof Error ? caughtError.message : "Could not delete recruiter job.");
+              setIsDeletingJob(false);
+            });
+        }}
+      />
+
+      <RecruiterCandidateCreateDialog
+        open={isCandidateDialogOpen}
+        form={candidateForm}
+        error={candidateError}
+        isSubmitting={isCreatingCandidate}
+        onChange={(updater) => setCandidateForm((current) => updater(current))}
+        onClose={() => {
+          if (isCreatingCandidate) {
+            return;
+          }
+          setIsCandidateDialogOpen(false);
+        }}
+        onSubmit={(form) => {
+          if (!accessToken) {
+            return;
+          }
+
+          const formData = new FormData(form);
+          const candidateCvFile = formData.get("candidate_cv");
+
+          setIsCreatingCandidate(true);
+          setCandidateError(null);
+          setCandidateFeedback(null);
+
+          void createRecruiterCandidate(accessToken, jobId, buildCandidatePayload(candidateForm))
+            .then(async (candidate) => {
+              const hasCandidateCv = candidateCvFile instanceof File && candidateCvFile.size > 0;
+              if (hasCandidateCv) {
+                await uploadRecruiterCandidateDocument(accessToken, jobId, candidate.id, {
+                  documentType: "recruiter_candidate_cv",
+                  file: candidateCvFile,
+                });
+              }
+              setCandidateForm(emptyCandidateForm);
+              form.reset();
+              setIsCandidateDialogOpen(false);
+              setCandidateFeedback(
+                hasCandidateCv
+                  ? `${candidate.full_name} added to this job with the candidate CV uploaded.`
+                  : `${candidate.full_name} added to this job.`,
+              );
+              await refreshJob(accessToken);
+            })
+            .catch((caughtError) => {
+              setCandidateError(caughtError instanceof Error ? caughtError.message : "Could not add recruiter candidate.");
+            })
+            .finally(() => setIsCreatingCandidate(false));
+        }}
+      />
+
       <div className="grid gap-6 xl:grid-cols-[1fr_0.95fr]">
         <Card>
           <CardHeader>
             <CardTitle>Job summary</CardTitle>
-            <CardDescription>Live job detail and review data loaded from recruiter endpoints.</CardDescription>
+            <CardDescription>Review the role scope, required skills, and current hiring activity for this job.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{data.detail.description}</p>
@@ -185,10 +280,20 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Job description upload</CardTitle>
-            <CardDescription>Attach the recruiter-side job description document to this job record.</CardDescription>
+            <CardTitle>Source job brief</CardTitle>
+            <CardDescription>
+              Optional but recommended. Upload the full job description or hiring brief so recruiter reports can quote and ground themselves in the original role document.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-sm leading-6 text-[var(--color-ink-muted)]">
+              <p>
+                The job title, summary, seniority, location, and skills you entered already define the job record.
+              </p>
+              <p className="mt-2">
+                This upload is a separate source document for evidence-backed fit summaries and interview packs.
+              </p>
+            </div>
             <form
               className="space-y-4"
               onSubmit={(event) => {
@@ -225,7 +330,7 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
               {documentError ? <p className="text-sm text-[var(--color-danger)]">{documentError}</p> : null}
               {documentFeedback ? <p className="text-sm text-[var(--color-teal)]">{documentFeedback}</p> : null}
               <Button type="submit" disabled={isUploadingDocument}>
-                {isUploadingDocument ? "Uploading..." : "Upload job description"}
+                {isUploadingDocument ? "Uploading..." : "Upload job brief"}
               </Button>
             </form>
           </CardContent>
@@ -235,96 +340,35 @@ export function RecruiterJobDetailPage({ jobId }: { jobId: number }) {
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Add recruiter candidate</CardTitle>
-            <CardDescription>Create a scoped candidate record under this job before uploading recruiter-side documents.</CardDescription>
+            <CardTitle>Candidate intake</CardTitle>
+            <CardDescription>Create a scoped candidate under this job, then upload more recruiter-side evidence when needed.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form
-              className="space-y-5"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!accessToken) {
-                  return;
-                }
-
-                setIsCreatingCandidate(true);
+          <CardContent className="space-y-4">
+            <p className="text-sm leading-6 text-[var(--color-ink-muted)]">
+              Add a candidate only when you are ready to attach them to this specific role. The candidate modal can also upload the CV immediately.
+            </p>
+            {candidateFeedback ? (
+              <div className="rounded-2xl border border-[rgba(15,123,76,0.18)] bg-[rgba(15,123,76,0.08)] px-4 py-3 text-sm font-medium text-[var(--color-teal)]">
+                {candidateFeedback}
+              </div>
+            ) : null}
+            {candidateError ? <p className="text-sm text-[var(--color-danger)]">{candidateError}</p> : null}
+            <Button
+              type="button"
+              onClick={() => {
                 setCandidateError(null);
-                setCandidateFeedback(null);
-
-                void createRecruiterCandidate(accessToken, jobId, buildCandidatePayload(candidateForm))
-                  .then(async (candidate) => {
-                    setCandidateForm(emptyCandidateForm);
-                    setCandidateFeedback(`${candidate.full_name} added to this job.`);
-                    await refreshJob(accessToken);
-                  })
-                  .catch((caughtError) => {
-                    setCandidateError(caughtError instanceof Error ? caughtError.message : "Could not create recruiter candidate.");
-                  })
-                  .finally(() => setIsCreatingCandidate(false));
+                setIsCandidateDialogOpen(true);
               }}
             >
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--color-ink)]" htmlFor="candidate-name">
-                  Full name
-                </label>
-                <Input
-                  id="candidate-name"
-                  value={candidateForm.full_name}
-                  onChange={(event) => setCandidateForm((current) => ({ ...current, full_name: event.target.value }))}
-                  placeholder="Candidate name"
-                  required
-                />
-              </div>
-              <div className="grid gap-5 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-[var(--color-ink)]" htmlFor="candidate-email">
-                    Email
-                  </label>
-                  <Input
-                    id="candidate-email"
-                    type="email"
-                    value={candidateForm.email}
-                    onChange={(event) => setCandidateForm((current) => ({ ...current, email: event.target.value }))}
-                    placeholder="candidate@example.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-[var(--color-ink)]" htmlFor="candidate-title">
-                    Current title
-                  </label>
-                  <Input
-                    id="candidate-title"
-                    value={candidateForm.current_title}
-                    onChange={(event) => setCandidateForm((current) => ({ ...current, current_title: event.target.value }))}
-                    placeholder="Senior Backend Engineer"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--color-ink)]" htmlFor="candidate-notes">
-                  Notes
-                </label>
-                <Textarea
-                  id="candidate-notes"
-                  className="min-h-28"
-                  value={candidateForm.notes}
-                  onChange={(event) => setCandidateForm((current) => ({ ...current, notes: event.target.value }))}
-                  placeholder="Initial recruiter notes, sourcing context, or referral details."
-                />
-              </div>
-              {candidateError ? <p className="text-sm text-[var(--color-danger)]">{candidateError}</p> : null}
-              {candidateFeedback ? <p className="text-sm text-[var(--color-teal)]">{candidateFeedback}</p> : null}
-              <Button type="submit" disabled={isCreatingCandidate}>
-                {isCreatingCandidate ? "Adding candidate..." : "Add candidate"}
-              </Button>
-            </form>
+              Add candidate
+            </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Candidate list</CardTitle>
-            <CardDescription>Each candidate card exposes live review counts, shortlist status, and a route for uploads and review details.</CardDescription>
+            <CardDescription>Each candidate card shows shortlist status, report counts, and quick access to uploads and review details.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {data.review.candidates.length ? (

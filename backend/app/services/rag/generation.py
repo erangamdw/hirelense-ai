@@ -34,6 +34,7 @@ class GroundedGenerationRequest:
     role: UserRole
     prompt_type: GroundedPromptType
     document_types: list[DocumentType] | None = None
+    document_ids: list[int] | None = None
     top_k: int | None = None
     score_threshold: float | None = None
     recruiter_job_id: int | None = None
@@ -80,6 +81,7 @@ class RetrievalBackedGenerationService(GroundedGenerationService):
                     user=request.user,
                     role=request.role,
                     document_types=applied_document_types,
+                    document_ids=request.document_ids,
                     top_k=request.top_k,
                     score_threshold=request.score_threshold,
                     recruiter_job_id=request.recruiter_job_id,

@@ -53,7 +53,7 @@ export function CandidateReportsPage() {
     return (
       <EmptyState
         title="Sign in to review saved reports"
-        message="The report history page loads persisted candidate outputs from the backend reports API."
+        message="Review your saved interview-prep outputs and reopen earlier guidance whenever you need it."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -64,7 +64,7 @@ export function CandidateReportsPage() {
     return (
       <ErrorState
         title="Candidate reports unavailable"
-        message="This route expects a candidate account."
+        message="This page is only available to candidate accounts."
         actionHref="/recruiter"
         actionLabel="Open recruiter view"
       />
@@ -79,7 +79,7 @@ export function CandidateReportsPage() {
     <Card>
       <CardHeader>
         <CardTitle>Saved reports</CardTitle>
-        <CardDescription>Filter persisted candidate reports and open detail pages backed by `/reports/:id`.</CardDescription>
+        <CardDescription>Filter your saved interview-prep outputs and reopen the reports you want to revisit.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -121,7 +121,7 @@ export function CandidateReportsPage() {
           ))
         ) : (
           <p className="text-sm text-[var(--color-ink-muted)]">
-            No saved reports match this filter yet. The page is ready for candidate generation flows to start persisting output.
+            No saved reports match this filter yet. Generate and save an output to start building your report history.
           </p>
         )}
       </CardContent>

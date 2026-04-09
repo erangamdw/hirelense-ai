@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { CandidateAssistantNav } from "@/components/candidate/candidate-assistant-nav";
@@ -14,8 +14,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  clearCandidateWorkspaceState,
+  readCandidateWorkspaceState,
+  readDefaultCandidateJobDescriptionId,
+  writeCandidateWorkspaceState,
+  writeDefaultCandidateJobDescriptionId,
+} from "@/lib/assistant-storage";
+import { fetchDocuments } from "@/lib/api/documents";
 import { createReport } from "@/lib/api/reports";
 import type {
+  CandidateDocument,
   CandidateGeneratedReportBase,
   CandidateGenerationPayload,
   DocumentType,
@@ -39,6 +48,91 @@ function normalizeDocumentTypes(types: DocumentType[]) {
     return undefined;
   }
   return types;
+}
+
+function filterReadyDocuments(documents: CandidateDocument[]) {
+  return documents.filter((document) => document.indexing_status === "succeeded");
+}
+
+function sortDocumentsByNewest(documents: CandidateDocument[]) {
+  return [...documents].sort((left, right) => {
+    const leftTime = Date.parse(left.created_at);
+    const rightTime = Date.parse(right.created_at);
+    return rightTime - leftTime;
+  });
+}
+
+function deriveDefaultSelectedDocumentIds(documents: CandidateDocument[]) {
+  const sortedDocuments = sortDocumentsByNewest(documents);
+  const latestJobDescription = sortedDocuments.find((document) => document.document_type === "job_description");
+
+  return sortedDocuments
+    .filter((document) => document.document_type !== "job_description" || document.id === latestJobDescription?.id)
+    .map((document) => document.id);
+}
+
+function deriveSelectedDocumentIdsWithPreferredJobDescription(
+  documents: CandidateDocument[],
+  preferredJobDescriptionId: number | null,
+) {
+  const baseSelection = deriveDefaultSelectedDocumentIds(documents);
+  if (!preferredJobDescriptionId) {
+    return baseSelection;
+  }
+
+  const preferredJobDescription = documents.find(
+    (document) => document.document_type === "job_description" && document.id === preferredJobDescriptionId,
+  );
+  if (!preferredJobDescription) {
+    return baseSelection;
+  }
+
+  const jobDescriptionIds = documents
+    .filter((document) => document.document_type === "job_description")
+    .map((document) => document.id);
+
+  return [
+    ...baseSelection.filter((documentId) => !jobDescriptionIds.includes(documentId)),
+    preferredJobDescription.id,
+  ];
+}
+
+function getScopedAvailableDocuments(
+  documents: CandidateDocument[],
+  selectedDocumentTypes: DocumentType[],
+) {
+  return documents.filter((document) => selectedDocumentTypes.includes(document.document_type));
+}
+
+function getScopedSelectedDocumentIds(
+  selectedDocumentIds: number[],
+  documents: CandidateDocument[],
+  selectedDocumentTypes: DocumentType[],
+) {
+  const scopedDocumentIds = new Set(
+    getScopedAvailableDocuments(documents, selectedDocumentTypes).map((document) => document.id),
+  );
+
+  return selectedDocumentIds.filter((documentId) => scopedDocumentIds.has(documentId));
+}
+
+function normalizeDocumentIds(
+  selectedDocumentIds: number[],
+  documents: CandidateDocument[],
+  selectedDocumentTypes: DocumentType[],
+) {
+  const scopedAvailableDocuments = getScopedAvailableDocuments(documents, selectedDocumentTypes);
+  const scopedSelectedDocumentIds = getScopedSelectedDocumentIds(selectedDocumentIds, documents, selectedDocumentTypes);
+
+  if (!scopedAvailableDocuments.length) {
+    return undefined;
+  }
+
+  if (scopedSelectedDocumentIds.length === scopedAvailableDocuments.length) {
+    return undefined;
+  }
+
+  return scopedSelectedDocumentIds;
 }
 
 function toPayloadRecord<T extends CandidateGeneratedReportBase>(value: T): Record<string, unknown> {
@@ -109,11 +203,11 @@ export function GenerationMetaCard({
   saveMessage: string | null;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Generation metadata</CardTitle>
-        <CardDescription>Model settings and document scope returned by the backend.</CardDescription>
-      </CardHeader>
+      <Card>
+        <CardHeader>
+          <CardTitle>Generation metadata</CardTitle>
+          <CardDescription>Model settings and document scope used for this result.</CardDescription>
+        </CardHeader>
       <CardContent className="space-y-4 text-sm text-[var(--color-ink-muted)]">
         <div className="flex flex-wrap gap-2">
           <Badge>{result.provider}</Badge>
@@ -169,26 +263,147 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
   const [selectedDocumentTypes, setSelectedDocumentTypes] = useState<DocumentType[]>(
     documentTypeOptions.map((item) => item.value),
   );
+  const [availableDocuments, setAvailableDocuments] = useState<CandidateDocument[]>([]);
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<number[]>([]);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
   const [result, setResult] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isWorkspaceHydrated, setIsWorkspaceHydrated] = useState(false);
+  const [defaultJobDescriptionId, setDefaultJobDescriptionId] = useState<number | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<DocumentType, boolean>>({
+    cv: false,
+    job_description: false,
+    project_notes: false,
+    interview_feedback: false,
+    recruiter_candidate_cv: false,
+  });
   const [viewerChunkIds, setViewerChunkIds] = useState<number[]>([]);
   const [activeEvidenceChunkId, setActiveEvidenceChunkId] = useState<number | null>(null);
+  const availableDocumentsRef = useRef<CandidateDocument[]>([]);
   const evidence = result?.evidence ?? [];
+  const documentGroups = documentTypeOptions
+    .map((option) => ({
+      option,
+      documents: sortDocumentsByNewest(
+        availableDocuments.filter((document) => document.document_type === option.value),
+      ),
+    }))
+    .filter((group) => selectedDocumentTypes.includes(group.option.value));
 
   useEffect(() => {
-    setQuery(defaultQuery);
-    setSelectedDocumentTypes(documentTypeOptions.map((item) => item.value));
-    setResult(null);
+    availableDocumentsRef.current = availableDocuments;
+  }, [availableDocuments]);
+
+  useEffect(() => {
+    if (user?.role !== "candidate") {
+      setIsWorkspaceHydrated(false);
+      return;
+    }
+
+    const storedDefaultJobDescriptionId = readDefaultCandidateJobDescriptionId(user.id);
+    setDefaultJobDescriptionId(storedDefaultJobDescriptionId);
+
+    const storedWorkspaceState = readCandidateWorkspaceState<T>(user.id, reportType);
+    if (storedWorkspaceState) {
+      setQuery(storedWorkspaceState.query);
+      setSelectedDocumentTypes(storedWorkspaceState.selectedDocumentTypes);
+      setSelectedDocumentIds(storedWorkspaceState.selectedDocumentIds);
+      setResult(storedWorkspaceState.result);
+    } else {
+      setQuery(defaultQuery);
+      setSelectedDocumentTypes(documentTypeOptions.map((item) => item.value));
+      setSelectedDocumentIds(
+        deriveSelectedDocumentIdsWithPreferredJobDescription(
+          availableDocumentsRef.current,
+          storedDefaultJobDescriptionId,
+        ),
+      );
+      setResult(null);
+    }
+
     setError(null);
     setSaveMessage(null);
     setIsGenerating(false);
     setIsSaving(false);
     setViewerChunkIds([]);
     setActiveEvidenceChunkId(null);
-  }, [defaultQuery, reportType]);
+    setIsWorkspaceHydrated(true);
+  }, [defaultQuery, reportType, user]);
+
+  useEffect(() => {
+    if (!isWorkspaceHydrated || user?.role !== "candidate") {
+      return;
+    }
+
+    writeCandidateWorkspaceState(user.id, reportType, {
+      query,
+      selectedDocumentTypes,
+      selectedDocumentIds,
+      result,
+    });
+  }, [isWorkspaceHydrated, query, reportType, result, selectedDocumentIds, selectedDocumentTypes, user]);
+
+  useEffect(() => {
+    if (!isCandidateSession || !accessToken) {
+      setAvailableDocuments([]);
+      setSelectedDocumentIds([]);
+      setDocumentsError(null);
+      setIsLoadingDocuments(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsLoadingDocuments(true);
+    setDocumentsError(null);
+
+    void fetchDocuments(accessToken, 100)
+      .then((documents) => {
+        if (isCancelled) {
+          return;
+        }
+
+        const readyDocuments = filterReadyDocuments(documents);
+        setAvailableDocuments(readyDocuments);
+        setSelectedDocumentIds((current) => {
+          if (!current.length) {
+            return deriveSelectedDocumentIdsWithPreferredJobDescription(
+              readyDocuments,
+              user?.role === "candidate" ? readDefaultCandidateJobDescriptionId(user.id) : null,
+            );
+          }
+
+          const readyDocumentIds = new Set(readyDocuments.map((document) => document.id));
+          const preserved = current.filter((documentId) => readyDocumentIds.has(documentId));
+          const defaultDocumentIds = deriveSelectedDocumentIdsWithPreferredJobDescription(
+            readyDocuments,
+            user?.role === "candidate" ? readDefaultCandidateJobDescriptionId(user.id) : null,
+          );
+          const newlyAvailable = defaultDocumentIds.filter((documentId) => !preserved.includes(documentId));
+          return [...preserved, ...newlyAvailable];
+        });
+      })
+      .catch((caughtError) => {
+        if (isCancelled) {
+          return;
+        }
+        setAvailableDocuments([]);
+        setSelectedDocumentIds([]);
+        setDocumentsError(caughtError instanceof Error ? caughtError.message : "Could not load documents.");
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsLoadingDocuments(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [accessToken, isCandidateSession, user]);
 
   useEffect(() => {
     if (!activeEvidenceChunkId) {
@@ -231,6 +446,106 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
     });
   }
 
+  function toggleDocumentSelection(documentId: number) {
+    const targetDocument = availableDocuments.find((document) => document.id === documentId);
+
+    setSelectedDocumentIds((current) => {
+      if (!targetDocument) {
+        return current;
+      }
+
+      if (targetDocument.document_type === "job_description") {
+        if (current.includes(documentId)) {
+          return current.filter((item) => item !== documentId);
+        }
+
+        const jobDescriptionIds = availableDocuments
+          .filter((document) => document.document_type === "job_description")
+          .map((document) => document.id);
+        return [...current.filter((item) => !jobDescriptionIds.includes(item)), documentId];
+      }
+
+      if (current.includes(documentId)) {
+        return current.filter((item) => item !== documentId);
+      }
+      return [...current, documentId];
+    });
+  }
+
+  function selectDocumentsForType(documentType: DocumentType, nextChecked: boolean) {
+    const typeDocumentIds = sortDocumentsByNewest(
+      availableDocuments.filter((document) => document.document_type === documentType),
+    ).map((document) => document.id);
+
+    setSelectedDocumentIds((current) => {
+      if (nextChecked) {
+        if (documentType === "job_description") {
+          const latestDocumentId = typeDocumentIds[0];
+          if (!latestDocumentId) {
+            return current;
+          }
+
+          return [
+            ...current.filter((documentId) => !typeDocumentIds.includes(documentId)),
+            latestDocumentId,
+          ];
+        }
+
+        const next = [...current];
+        typeDocumentIds.forEach((documentId) => {
+          if (!next.includes(documentId)) {
+            next.push(documentId);
+          }
+        });
+        return next;
+      }
+
+      return current.filter((documentId) => !typeDocumentIds.includes(documentId));
+    });
+  }
+
+  function toggleGroupCollapsed(documentType: DocumentType) {
+    setCollapsedGroups((current) => ({
+      ...current,
+      [documentType]: !current[documentType],
+    }));
+  }
+
+  function handleSetDefaultJobDescription(documentId: number) {
+    if (!user || user.role !== "candidate") {
+      return;
+    }
+
+    writeDefaultCandidateJobDescriptionId(user.id, documentId);
+    setDefaultJobDescriptionId(documentId);
+    setSelectedDocumentIds((current) => {
+      const jobDescriptionIds = availableDocuments
+        .filter((document) => document.document_type === "job_description")
+        .map((document) => document.id);
+      return [...current.filter((item) => !jobDescriptionIds.includes(item)), documentId];
+    });
+  }
+
+  function resetWorkspaceState() {
+    const preferredJobDescriptionId = user?.role === "candidate" ? readDefaultCandidateJobDescriptionId(user.id) : null;
+    setQuery(defaultQuery);
+    setSelectedDocumentTypes(documentTypeOptions.map((item) => item.value));
+    setSelectedDocumentIds(
+      deriveSelectedDocumentIdsWithPreferredJobDescription(availableDocuments, preferredJobDescriptionId),
+    );
+    setResult(null);
+    setError(null);
+    setSaveMessage(null);
+    setIsGenerating(false);
+    setIsSaving(false);
+    setViewerChunkIds([]);
+    setActiveEvidenceChunkId(null);
+
+    if (user?.role === "candidate") {
+      clearCandidateWorkspaceState(user.id, reportType);
+    }
+  }
+
   async function handleGenerate() {
     if (!accessToken) {
       return;
@@ -239,6 +554,17 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
     const normalizedQuery = query.trim();
     if (normalizedQuery.length < 3) {
       setError("Enter a prompt with at least 3 characters.");
+      return;
+    }
+
+    const scopedAvailableDocuments = getScopedAvailableDocuments(availableDocuments, selectedDocumentTypes);
+    const scopedSelectedDocumentIds = getScopedSelectedDocumentIds(
+      selectedDocumentIds,
+      availableDocuments,
+      selectedDocumentTypes,
+    );
+    if (scopedAvailableDocuments.length > 0 && scopedSelectedDocumentIds.length === 0) {
+      setError("Select at least one uploaded document for the current scope before generating.");
       return;
     }
 
@@ -252,6 +578,7 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
       const payload = await generate(accessToken, {
         query: normalizedQuery,
         documentTypes: normalizeDocumentTypes(selectedDocumentTypes),
+        documentIds: normalizeDocumentIds(selectedDocumentIds, availableDocuments, selectedDocumentTypes),
       });
       setResult(payload);
     } catch (caughtError) {
@@ -292,7 +619,7 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
     return (
       <EmptyState
         title="Sign in to use the interview assistant"
-        message="These candidate assistant pages call the live generation and report APIs."
+        message="Open your candidate account to generate interview questions, answer guidance, STAR drafts, and skill-gap insights."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -303,7 +630,7 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
     return (
       <ErrorState
         title="Candidate assistant unavailable"
-        message="This route expects a candidate account."
+        message="This page is only available to candidate accounts."
         actionHref="/recruiter"
         actionLabel="Open recruiter view"
       />
@@ -311,7 +638,7 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
   }
 
   if (!isCandidateSession) {
-    return <ErrorState title="Candidate assistant unavailable" message="Your session is not ready yet." />;
+    return <ErrorState title="Candidate assistant unavailable" message="Your session is not ready yet. Please refresh or sign in again." />;
   }
 
   return (
@@ -319,7 +646,7 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
       <div className="space-y-6">
         <CandidateAssistantNav />
 
-        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_24rem]">
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -360,11 +687,139 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
                   </div>
                 </div>
 
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-[var(--color-ink)]">Specific documents</p>
+                    <p className="text-sm text-[var(--color-ink-muted)]">
+                      Narrow the selected types to exact files when you want role-specific results, especially for job descriptions.
+                    </p>
+                  </div>
+
+                  {isLoadingDocuments ? (
+                    <p className="text-sm text-[var(--color-ink-muted)]">Loading your indexed documents...</p>
+                  ) : documentsError ? (
+                    <p className="text-sm text-[var(--color-danger)]">{documentsError}</p>
+                  ) : availableDocuments.length === 0 ? (
+                    <p className="text-sm text-[var(--color-ink-muted)]">
+                      No indexed documents are ready yet. Upload, parse, chunk, and reindex a document before using file-level scope.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {documentGroups.map(({ option, documents }) => {
+                        if (!documents.length) {
+                          return (
+                            <div
+                              key={option.value}
+                              className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-sm text-[var(--color-ink-muted)]"
+                            >
+                              {`No indexed ${option.label.toLowerCase()} documents are ready yet.`}
+                            </div>
+                          );
+                        }
+
+                        const selectedCount = documents.filter((document) => selectedDocumentIds.includes(document.id)).length;
+
+                        return (
+                          <div
+                            key={option.value}
+                            className="space-y-3 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <button
+                                type="button"
+                                className="min-w-0 flex-1 text-left"
+                                onClick={() => toggleGroupCollapsed(option.value)}
+                              >
+                                <p className="text-sm font-semibold text-[var(--color-ink)]">{option.label}</p>
+                                <p className="text-xs text-[var(--color-ink-muted)]">
+                                  {option.value === "job_description"
+                                    ? `${selectedCount ? "1 primary file selected" : "No primary file selected"}`
+                                    : `${selectedCount} of ${documents.length} selected`}
+                                </p>
+                              </button>
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  className="h-9 px-3 text-xs"
+                                  onClick={() => selectDocumentsForType(option.value, true)}
+                                >
+                                  {option.value === "job_description" ? "Select latest" : "Use all"}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  className="h-9 px-3 text-xs"
+                                  onClick={() => selectDocumentsForType(option.value, false)}
+                                >
+                                  Clear
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  className="h-9 px-3 text-xs"
+                                  onClick={() => toggleGroupCollapsed(option.value)}
+                                >
+                                  {collapsedGroups[option.value] ? "Expand" : "Collapse"}
+                                </Button>
+                              </div>
+                            </div>
+
+                            {collapsedGroups[option.value] ? null : (
+                              <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                                {documents.map((document) => (
+                                  <label
+                                    key={document.id}
+                                    className="flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-ink)]"
+                                  >
+                                    <input
+                                      type={option.value === "job_description" ? "radio" : "checkbox"}
+                                      name={option.value === "job_description" ? "primary-job-description" : undefined}
+                                      checked={selectedDocumentIds.includes(document.id)}
+                                      onChange={() => toggleDocumentSelection(document.id)}
+                                      className="mt-1 h-4 w-4 border-[var(--color-border)]"
+                                    />
+                                    <span className="min-w-0 space-y-1">
+                                      <span className="flex flex-wrap items-center gap-2">
+                                        <span className="block break-words font-medium">{document.original_filename}</span>
+                                        {option.value === "job_description" && defaultJobDescriptionId === document.id ? (
+                                          <Badge>Default</Badge>
+                                        ) : null}
+                                      </span>
+                                      <span className="block text-xs text-[var(--color-ink-muted)]">{document.created_at.slice(0, 10)}</span>
+                                      {option.value === "job_description" ? (
+                                        <button
+                                          type="button"
+                                          className="text-xs font-semibold text-[var(--color-accent)]"
+                                          onClick={(event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+                                            handleSetDefaultJobDescription(document.id);
+                                          }}
+                                        >
+                                          {defaultJobDescriptionId === document.id ? "Default job description" : "Set as default"}
+                                        </button>
+                                      ) : null}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
 
                 <div className="flex flex-wrap gap-3">
                   <Button type="button" disabled={isGenerating} onClick={() => void handleGenerate()}>
                     {isGenerating ? generatingButtonLabel : generateButtonLabel}
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={resetWorkspaceState}>
+                    Reset
                   </Button>
                   <Button
                     type="button"
@@ -381,14 +836,16 @@ export function CandidateGenerationWorkspace<T extends CandidateGeneratedReportB
               </CardContent>
             </Card>
 
-            {result ? (
-              <>
-                {renderResult(result)}
-                <GenerationMetaCard result={result} saveMessage={saveMessage} />
-              </>
-            ) : (
-              <EmptyState title={emptyResultTitle} message={emptyResultMessage} />
-            )}
+            <div className="space-y-6 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto xl:pr-2">
+              {result ? (
+                <>
+                  {renderResult(result)}
+                  <GenerationMetaCard result={result} saveMessage={saveMessage} />
+                </>
+              ) : (
+                <EmptyState title={emptyResultTitle} message={emptyResultMessage} />
+              )}
+            </div>
           </div>
 
           <CandidateEvidenceSidePanel evidence={evidence} onOpenEvidence={(chunkId) => openEvidence([chunkId])} />

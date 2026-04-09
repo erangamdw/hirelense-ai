@@ -72,11 +72,11 @@ function RecruiterGenerationMetaCard({
   saveMessage: string | null;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Generation metadata</CardTitle>
-        <CardDescription>Model settings and scoped retrieval metadata returned by the backend.</CardDescription>
-      </CardHeader>
+      <Card>
+        <CardHeader>
+          <CardTitle>Generation metadata</CardTitle>
+          <CardDescription>Model settings and scoped evidence used for this result.</CardDescription>
+        </CardHeader>
       <CardContent className="space-y-4 text-sm text-[var(--color-ink-muted)]">
         <div className="flex flex-wrap gap-2">
           <Badge>{result.provider}</Badge>
@@ -266,7 +266,7 @@ export function RecruiterGenerationWorkspace<T extends RecruiterGeneratedReportB
         recruiterCandidateId: candidateId,
         payload: toPayloadRecord(result),
       });
-      setSaveMessage(`Saved recruiter report #${report.id}.`);
+      setSaveMessage(`Successfully saved "${report.title}".`);
       await refreshScopedHistory(accessToken);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Could not save recruiter report.");
@@ -283,7 +283,7 @@ export function RecruiterGenerationWorkspace<T extends RecruiterGeneratedReportB
     return (
       <EmptyState
         title="Sign in to use recruiter analysis"
-        message="These recruiter analysis pages call the live generation and report APIs."
+        message="Open your recruiter account to generate fit summaries, interview packs, and scoped report history."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -294,7 +294,7 @@ export function RecruiterGenerationWorkspace<T extends RecruiterGeneratedReportB
     return (
       <ErrorState
         title="Recruiter analysis unavailable"
-        message="This route expects a recruiter account."
+        message="This page is only available to recruiter accounts."
         actionHref="/candidate"
         actionLabel="Open candidate view"
       />
@@ -302,14 +302,14 @@ export function RecruiterGenerationWorkspace<T extends RecruiterGeneratedReportB
   }
 
   if (!isRecruiterSession) {
-    return <ErrorState title="Recruiter analysis unavailable" message="Your session is not ready yet." />;
+    return <ErrorState title="Recruiter analysis unavailable" message="Your session is not ready yet. Please refresh or sign in again." />;
   }
 
   return (
     <div className="space-y-6">
       <RecruiterCandidateNav jobId={jobId} candidateId={candidateId} />
 
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_24rem]">
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -363,19 +363,27 @@ export function RecruiterGenerationWorkspace<T extends RecruiterGeneratedReportB
                   Back to candidate review
                 </Link>
               </div>
+
+              {saveMessage ? (
+                <div className="rounded-2xl border border-[rgba(15,123,76,0.18)] bg-[rgba(15,123,76,0.08)] px-4 py-3 text-sm font-medium text-[var(--color-teal)]">
+                  {saveMessage}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
-          {result ? (
-            <>
-              {renderResult(result)}
-              <RecruiterGenerationMetaCard result={result} saveMessage={saveMessage} />
-            </>
-          ) : (
-            <EmptyState title={emptyResultTitle} message={emptyResultMessage} />
-          )}
+          <div className="space-y-6 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto xl:pr-2">
+            {result ? (
+              <>
+                {renderResult(result)}
+                <RecruiterGenerationMetaCard result={result} saveMessage={saveMessage} />
+              </>
+            ) : (
+              <EmptyState title={emptyResultTitle} message={emptyResultMessage} />
+            )}
 
-          <ScopedSavedReports items={savedReports} />
+            <ScopedSavedReports items={savedReports} />
+          </div>
         </div>
 
         <RecruiterEvidenceSidePanel evidence={result?.evidence ?? []} />

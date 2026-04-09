@@ -22,7 +22,7 @@ export function EmptyState({
       <CardContent className="space-y-4">
         <p className="text-sm text-[var(--color-ink-muted)]">{message}</p>
         {actionHref && actionLabel ? (
-          <Link className={buttonVariants()} href={actionHref}>
+          <Link className={buttonVariants({ className: "text-white hover:text-white" })} href={actionHref} style={{ color: "#ffffff" }}>
             {actionLabel}
           </Link>
         ) : null}

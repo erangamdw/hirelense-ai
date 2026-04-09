@@ -141,7 +141,7 @@ export function RecruiterSetupPage() {
     return (
       <EmptyState
         title="Create a recruiter account to start setup"
-        message="This guided setup route assumes the recruiter workflow and points you straight into jobs, candidates, and reports."
+        message="Set up your recruiter workspace before creating jobs, uploading evidence, and reviewing candidates."
         actionHref="/recruiter/register"
         actionLabel="Create recruiter account"
       />
@@ -152,7 +152,7 @@ export function RecruiterSetupPage() {
     return (
       <ErrorState
         title="Recruiter setup unavailable"
-        message="This route expects a recruiter account."
+        message="This page is only available to recruiter accounts."
         actionHref="/candidate"
         actionLabel="Open candidate view"
       />
@@ -164,7 +164,7 @@ export function RecruiterSetupPage() {
   }
 
   if (!data) {
-    return <EmptyState title="Recruiter setup is not ready" message="The recruiter summary endpoints did not return setup content." />;
+    return <EmptyState title="Recruiter setup is not ready" message="Your setup details are not available yet. Try refreshing the page." />;
   }
 
   const { summary, jobs, profile } = data;
@@ -172,42 +172,42 @@ export function RecruiterSetupPage() {
   const steps: SetupStep[] = [
     {
       title: "Recruiter account",
-      description: "Use a recruiter-scoped account so the dashboard, jobs, and reports stay isolated from candidate flows.",
+      description: "Your recruiter account keeps hiring activity separate from candidate-side preparation workflows.",
       complete: true,
       href: "/recruiter",
       actionLabel: "Open overview",
     },
     {
       title: "Recruiter profile",
-      description: "Save company metadata and recruiter type so the recruiter workspace has its own persisted identity layer.",
+      description: "Add your company and recruiter type so reports and workspace details reflect the right hiring context.",
       complete: profileExists,
       href: "/recruiter/setup",
       actionLabel: profileExists ? "Review profile" : "Complete profile",
     },
     {
       title: "Create first job",
-      description: "Add a role before attaching job descriptions, candidates, and recruiter-generated reports.",
+      description: "Save the core role details first: title, summary, seniority, location, and required skills.",
       complete: summary.jobs_count > 0,
       href: "/recruiter/jobs",
       actionLabel: summary.jobs_count > 0 ? "Manage jobs" : "Create job",
     },
     {
-      title: "Attach job scope",
-      description: "Upload the recruiter-side job description so retrieval and generation can use role evidence.",
+      title: "Add source job brief",
+      description: "Optionally upload the full job description or brief so recruiter reports can cite real role requirements instead of relying only on the summary you typed.",
       complete: jobs.some((job) => job.linked_document_count > 0),
       href: latestJob ? `/recruiter/jobs/${latestJob.id}` : "/recruiter/jobs",
       actionLabel: latestJob ? "Open latest job" : "Open jobs",
     },
     {
       title: "Add candidates",
-      description: "Create candidate records and attach recruiter-side CV or interview feedback under the correct job.",
+      description: "Add candidates and attach recruiter-side CVs or feedback under the correct job.",
       complete: summary.candidate_count > 0,
       href: latestJob ? `/recruiter/jobs/${latestJob.id}` : "/recruiter/jobs",
       actionLabel: summary.candidate_count > 0 ? "Review candidates" : "Add candidate",
     },
     {
       title: "Generate reports",
-      description: "Run fit summaries or interview packs after the recruiter evidence scope is in place.",
+      description: "Generate fit summaries or interview packs once the role and candidate evidence are ready.",
       complete: summary.report_count > 0,
       href: summary.report_count > 0 ? "/recruiter/reports" : latestJob ? `/recruiter/jobs/${latestJob.id}` : "/recruiter/jobs",
       actionLabel: summary.report_count > 0 ? "Open reports" : "Go to job workflow",
@@ -228,7 +228,7 @@ export function RecruiterSetupPage() {
           <CardHeader>
             <CardTitle>{profileTitle}</CardTitle>
             <CardDescription>
-              Use this page as the first-run path into recruiter identity, jobs, scoped evidence, and recruiter analysis.
+              Set up your company details first, then move into jobs, candidate evidence, and recruiter review.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -241,7 +241,7 @@ export function RecruiterSetupPage() {
                 <Badge>{profileExists ? "Profile saved" : "Profile needed"}</Badge>
               </div>
               <p className="mt-3 text-sm leading-6 text-[var(--color-ink-muted)]">
-                Recruiter setup now persists recruiter-specific company metadata separately from the shared auth user.
+                These details personalise the recruiter workspace and keep company information separate from the shared sign-in account.
               </p>
             </div>
 

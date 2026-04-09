@@ -6,9 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
+import { GeneratedRichText } from "@/components/shared/generated-rich-text";
 import { LoadingGrid } from "@/components/shared/loading-grid";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchReportDetail } from "@/lib/api/reports";
 import type { ReportType, SavedReport } from "@/lib/api/types";
@@ -128,7 +128,7 @@ function RecruiterFitSummaryView({ payload }: { payload: Record<string, unknown>
             <CardTitle>Fit summary</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{summary}</p>
+            <GeneratedRichText text={summary} variant="framed" />
           </CardContent>
         </Card>
       ) : null}
@@ -142,7 +142,9 @@ function RecruiterFitSummaryView({ payload }: { payload: Record<string, unknown>
             {strengths.map((item) => (
               <div key={`${item.title}-${item.summary}`} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
                 <p className="font-medium text-[var(--color-ink)]">{item.title}</p>
-                <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{item.summary}</p>
+                <div className="mt-2">
+                  <GeneratedRichText text={item.summary} variant="plain" />
+                </div>
                 <div className="mt-3">
                   <CitationLinks chunkIds={item.evidence_chunk_ids} />
                 </div>
@@ -159,7 +161,9 @@ function RecruiterFitSummaryView({ payload }: { payload: Record<string, unknown>
             {concerns.map((item) => (
               <div key={`${item.title}-${item.summary}`} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
                 <p className="font-medium text-[var(--color-ink)]">{item.title}</p>
-                <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{item.summary}</p>
+                <div className="mt-2">
+                  <GeneratedRichText text={item.summary} variant="plain" />
+                </div>
                 <div className="mt-3">
                   <CitationLinks chunkIds={item.evidence_chunk_ids} />
                 </div>
@@ -177,7 +181,7 @@ function RecruiterFitSummaryView({ payload }: { payload: Record<string, unknown>
           <CardContent className="space-y-3">
             {missingEvidenceAreas.map((item) => (
               <div key={item} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-                <p className="text-sm text-[var(--color-ink-muted)]">{item}</p>
+                <GeneratedRichText text={item} variant="plain" />
               </div>
             ))}
           </CardContent>
@@ -190,7 +194,7 @@ function RecruiterFitSummaryView({ payload }: { payload: Record<string, unknown>
             <CardTitle>Recommendation</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{recommendation}</p>
+            <GeneratedRichText text={recommendation} variant="framed" />
           </CardContent>
         </Card>
       ) : null}
@@ -216,7 +220,7 @@ function RecruiterInterviewPackView({ payload }: { payload: Record<string, unkno
             <CardTitle>Interview pack overview</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-7 text-[var(--color-ink-muted)]">{overview}</p>
+            <GeneratedRichText text={overview} variant="framed" />
           </CardContent>
         </Card>
       ) : null}
@@ -230,7 +234,9 @@ function RecruiterInterviewPackView({ payload }: { payload: Record<string, unkno
             {items.map((probe, index) => (
               <div key={`${probe.prompt}-${index}`} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
                 <p className="font-medium text-[var(--color-ink)]">{probe.prompt}</p>
-                <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{probe.rationale}</p>
+                <div className="mt-2">
+                  <GeneratedRichText text={probe.rationale} variant="plain" />
+                </div>
                 <div className="mt-3">
                   <CitationLinks chunkIds={probe.evidence_chunk_ids} />
                 </div>
@@ -248,7 +254,7 @@ function RecruiterInterviewPackView({ payload }: { payload: Record<string, unkno
           <CardContent className="space-y-3">
             {followUpQuestions.map((question) => (
               <div key={question} className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
-                <p className="text-sm text-[var(--color-ink-muted)]">{question}</p>
+                <GeneratedRichText text={question} variant="plain" />
               </div>
             ))}
           </CardContent>
@@ -282,7 +288,6 @@ export function RecruiterReportDetailPage({ reportId }: { reportId: number }) {
   const [report, setReport] = useState<SavedReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isRecruiterSession || !accessToken) {
@@ -315,7 +320,7 @@ export function RecruiterReportDetailPage({ reportId }: { reportId: number }) {
     return (
       <EmptyState
         title="Sign in to open recruiter report details"
-        message="Recruiter report detail pages are backed by the saved reports API."
+        message="Open your recruiter account to review saved fit summaries and interview packs."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -326,7 +331,7 @@ export function RecruiterReportDetailPage({ reportId }: { reportId: number }) {
     return (
       <ErrorState
         title="Recruiter report unavailable"
-        message="This route expects a recruiter account."
+        message="This page is only available to recruiter accounts."
         actionHref="/candidate"
         actionLabel="Open candidate view"
       />
@@ -338,7 +343,7 @@ export function RecruiterReportDetailPage({ reportId }: { reportId: number }) {
   }
 
   if (!report) {
-    return <EmptyState title="Report not found" message="The API did not return a recruiter report for this id." actionHref="/recruiter/reports" actionLabel="Back to reports" />;
+    return <EmptyState title="Report not found" message="We could not find a saved recruiter report for this link." actionHref="/recruiter/reports" actionLabel="Back to reports" />;
   }
 
   return (
@@ -353,47 +358,39 @@ export function RecruiterReportDetailPage({ reportId }: { reportId: number }) {
         </Link>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Report metadata</CardTitle>
-            <CardDescription>Core recruiter saved-report fields from the persistence layer.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-[var(--color-ink-muted)]">
-            <div className="flex flex-wrap gap-2">
-              <Badge>{formatLabel(report.report_type)}</Badge>
-              <Badge>Version {report.payload_version}</Badge>
-              {report.recruiter_job_id ? <Badge>{`Job ${report.recruiter_job_id}`}</Badge> : null}
-              {report.recruiter_candidate_id ? <Badge>{`Candidate ${report.recruiter_candidate_id}`}</Badge> : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>Report metadata</CardTitle>
+          <CardDescription>Saved generation settings, scope, and the original recruiter prompt.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm text-[var(--color-ink-muted)]">
+          <div className="flex flex-wrap gap-2">
+            <Badge>{formatLabel(report.report_type)}</Badge>
+            <Badge>Version {report.payload_version}</Badge>
+            {typeof report.payload.provider === "string" ? <Badge>{report.payload.provider}</Badge> : null}
+            {typeof report.payload.model === "string" ? <Badge>{report.payload.model}</Badge> : null}
+            {report.recruiter_job_id ? <Badge>{`Job ${report.recruiter_job_id}`}</Badge> : null}
+            {report.recruiter_candidate_id ? <Badge>{`Candidate ${report.recruiter_candidate_id}`}</Badge> : null}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">Created</p>
+              <p className="mt-2 text-sm text-[var(--color-ink)]">{formatDateTime(report.created_at)}</p>
             </div>
-            <p>Created: {formatDateTime(report.created_at)}</p>
-            <p>Owner role: {formatLabel(report.owner_role)}</p>
-            <p>Query: {report.query}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Export placeholder</CardTitle>
-            <CardDescription>Copy the persisted payload JSON for manual review or later export work.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                navigator.clipboard
-                  .writeText(JSON.stringify(report.payload, null, 2))
-                  .then(() => setCopyMessage("Payload copied to clipboard."))
-                  .catch(() => setCopyMessage("Clipboard copy was unavailable in this browser."));
-              }}
-            >
-              Copy payload JSON
-            </Button>
-            {copyMessage ? <p className="text-sm text-[var(--color-ink-muted)]">{copyMessage}</p> : null}
-          </CardContent>
-        </Card>
-      </div>
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">Generation settings</p>
+              <p className="mt-2 text-sm text-[var(--color-ink)]">
+                {typeof report.payload.temperature === "number" ? `Temperature ${report.payload.temperature}` : "Temperature unavailable"}
+                {typeof report.payload.max_output_tokens === "number" ? ` · Token budget ${report.payload.max_output_tokens}` : ""}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-ink-soft)]">Prompt</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[var(--color-ink)]">{report.query}</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <ReportSpecificView reportType={report.report_type} payload={report.payload} />
 
@@ -425,17 +422,6 @@ export function RecruiterReportDetailPage({ reportId }: { reportId: number }) {
         </Card>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payload JSON</CardTitle>
-          <CardDescription>The detail page keeps the exact saved payload available for inspection.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <pre className="overflow-x-auto rounded-3xl bg-[var(--color-ink)] px-5 py-4 text-xs leading-6 text-[var(--color-paper)]">
-            {JSON.stringify(report.payload, null, 2)}
-          </pre>
-        </CardContent>
-      </Card>
     </div>
   );
 }

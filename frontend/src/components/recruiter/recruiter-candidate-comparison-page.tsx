@@ -14,6 +14,7 @@ import {
   updateRecruiterCandidateStatus,
 } from "@/lib/api/recruiter";
 import type {
+  RecruiterCandidateComparisonItem,
   RecruiterCandidateComparison,
   RecruiterCandidateShortlistStatus,
 } from "@/lib/api/types";
@@ -33,6 +34,58 @@ function statusBadgeLabel(value: RecruiterCandidateShortlistStatus) {
 }
 
 type PendingStatusMap = Record<number, RecruiterCandidateShortlistStatus | null>;
+
+function scoreTone(score: number) {
+  if (score >= 80) {
+    return "bg-[rgba(12,140,116,0.12)] text-[var(--color-teal)]";
+  }
+  if (score >= 60) {
+    return "bg-[rgba(178,117,17,0.12)] text-[rgb(140,92,10)]";
+  }
+  return "bg-[rgba(168,58,41,0.12)] text-[var(--color-danger)]";
+}
+
+function MatchDimensionCard({
+  title,
+  score,
+  summary,
+}: {
+  title: string;
+  score: number;
+  summary: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-[var(--color-ink)]">{title}</p>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${scoreTone(score)}`}>{`${score}%`}</span>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--color-panel)]">
+        <div className="h-full rounded-full bg-[var(--color-ink)]" style={{ width: `${Math.max(8, score)}%` }} />
+      </div>
+      <p className="mt-3 text-sm leading-6 text-[var(--color-ink-muted)]">{summary}</p>
+    </div>
+  );
+}
+
+function ComparisonHeaderCard({ candidate }: { candidate: RecruiterCandidateComparisonItem }) {
+  return (
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-ink)] text-sm font-semibold text-[var(--color-paper)]">
+            {`#${candidate.rank_position}`}
+          </span>
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-ink-soft)]">Overall match</p>
+            <p className="mt-1 text-2xl font-semibold text-[var(--color-ink)]">{`${candidate.overall_match_score}%`}</p>
+          </div>
+        </div>
+        <Badge>{statusBadgeLabel(candidate.shortlist_status)}</Badge>
+      </div>
+    </div>
+  );
+}
 
 export function RecruiterCandidateComparisonPage({ jobId }: { jobId: number }) {
   const { accessToken, status, user } = useAuth();
@@ -72,7 +125,7 @@ export function RecruiterCandidateComparisonPage({ jobId }: { jobId: number }) {
     return (
       <EmptyState
         title="Sign in to compare recruiter candidates"
-        message="This comparison page is backed by the live recruiter comparison endpoint."
+        message="Open the recruiter workspace to compare candidates inside the same hiring scope."
         actionHref="/login"
         actionLabel="Go to sign in"
       />
@@ -83,7 +136,7 @@ export function RecruiterCandidateComparisonPage({ jobId }: { jobId: number }) {
     return (
       <ErrorState
         title="Recruiter comparison unavailable"
-        message="This route expects a recruiter account."
+        message="This page is only available to recruiter accounts."
         actionHref="/candidate"
         actionLabel="Open candidate view"
       />
@@ -95,7 +148,7 @@ export function RecruiterCandidateComparisonPage({ jobId }: { jobId: number }) {
   }
 
   if (!data) {
-    return <EmptyState title="Comparison not ready" message="The recruiter comparison endpoint did not return any data." />;
+    return <EmptyState title="Comparison not ready" message="There is no comparison data available for this job yet." />;
   }
 
   return (
@@ -105,6 +158,7 @@ export function RecruiterCandidateComparisonPage({ jobId }: { jobId: number }) {
           <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-ink-soft)]">Recruiter comparison</p>
           <h2 className="mt-2 text-2xl font-semibold text-[var(--color-ink)]">{data.title}</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--color-ink-muted)]">{data.description}</p>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--color-ink-soft)]">{data.ranking_basis}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Badge>{`${data.candidate_count} candidates`}</Badge>
@@ -132,10 +186,11 @@ export function RecruiterCandidateComparisonPage({ jobId }: { jobId: number }) {
                         {candidate.current_title || "No current title"} · {`${candidate.document_count} docs`} · {`${candidate.report_count} reports`}
                       </CardDescription>
                     </div>
-                    <Badge>{statusBadgeLabel(candidate.shortlist_status)}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
+                  <ComparisonHeaderCard candidate={candidate} />
+
                   {candidate.notes ? (
                     <p className="text-sm leading-6 text-[var(--color-ink-muted)]">{candidate.notes}</p>
                   ) : null}
@@ -191,11 +246,34 @@ export function RecruiterCandidateComparisonPage({ jobId }: { jobId: number }) {
                     })}
                   </div>
 
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <MatchDimensionCard
+                      title={candidate.skill_match.title}
+                      score={candidate.skill_match.score}
+                      summary={candidate.skill_match.summary}
+                    />
+                    <MatchDimensionCard
+                      title={candidate.tech_stack_match.title}
+                      score={candidate.tech_stack_match.score}
+                      summary={candidate.tech_stack_match.summary}
+                    />
+                    <MatchDimensionCard
+                      title={candidate.qualification_match.title}
+                      score={candidate.qualification_match.score}
+                      summary={candidate.qualification_match.summary}
+                    />
+                    <MatchDimensionCard
+                      title={candidate.experience_match.title}
+                      score={candidate.experience_match.score}
+                      summary={candidate.experience_match.summary}
+                    />
+                  </div>
+
                   {candidate.needs_fit_summary ? (
                     <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4">
                       <p className="text-sm font-medium text-[var(--color-ink)]">No saved fit summary yet</p>
                       <p className="mt-2 text-sm leading-6 text-[var(--color-ink-muted)]">
-                        Generate a fit summary for this candidate to compare evidence-backed strengths, concerns, and recommendation text here.
+                        Generate a fit summary for this candidate to compare strengths, concerns, and a recommendation side by side.
                       </p>
                     </div>
                   ) : (

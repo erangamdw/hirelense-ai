@@ -19,7 +19,7 @@ type RegisterFormProps = {
 
 export function RegisterForm({
   title = "Create account",
-  description = "Foundation register flow for candidate and recruiter roles.",
+  description = "Create a candidate or recruiter account to start using HireLens AI.",
   initialRole = "candidate",
   lockRole = false,
   submitLabel = "Create account",

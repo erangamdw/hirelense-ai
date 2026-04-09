@@ -59,6 +59,11 @@ class DocumentIndexingResponse(BaseModel):
     indexing_status: DocumentIndexingStatus
 
 
+class DocumentDeleteResponse(BaseModel):
+    document_id: int
+    status: str
+
+
 class TextDocumentCreateRequest(BaseModel):
     document_type: DocumentType
     title: str | None = Field(default=None, min_length=1, max_length=255)

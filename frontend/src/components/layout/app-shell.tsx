@@ -115,7 +115,9 @@ export function AppShell({
           <div className="rounded-[32px] border border-[var(--color-border)] bg-white/80 p-6 shadow-[0_26px_90px_-54px_rgba(13,18,39,0.5)] backdrop-blur md:p-8">
             <div className="flex flex-col gap-3 border-b border-[var(--color-border)] pb-6 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-[var(--color-ink-soft)]">Application shell</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-[var(--color-ink-soft)]">
+                  {role === "recruiter" ? "Recruiter workspace" : "Candidate workspace"}
+                </p>
                 <h1 className="mt-2 text-3xl font-semibold text-[var(--color-ink)]">{title}</h1>
                 <p className="mt-2 max-w-2xl text-sm text-[var(--color-ink-muted)]">{subtitle}</p>
               </div>

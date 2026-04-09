@@ -8,6 +8,7 @@ from app.models.document import DocumentType
 from app.models.user import User
 from app.schemas.document import (
     ChunkResponse,
+    DocumentDeleteResponse,
     DocumentChunkingResponse,
     DocumentIndexingResponse,
     DocumentResponse,
@@ -21,6 +22,7 @@ from app.services.documents import (
     DocumentValidationError,
     chunk_stored_document,
     create_document_record,
+    delete_document_for_user,
     index_document_chunks,
     list_documents_for_user,
     parse_stored_document,
@@ -179,3 +181,20 @@ def reindex_document(
         vector_ids=result.vector_ids,
         indexing_status=result.indexing_status,
     )
+
+
+@router.delete("/{document_id}", response_model=DocumentDeleteResponse)
+def delete_document(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> DocumentDeleteResponse:
+    try:
+        delete_document_for_user(db, user=current_user, document_id=document_id)
+    except DocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    return DocumentDeleteResponse(document_id=document_id, status="deleted")
